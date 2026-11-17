@@ -1,0 +1,26 @@
+flowchart LR
+  X0((Message start)) --> X1[Nhận statement/settlement]
+  X1 --> X2[Hash file + kiểm schema/trùng batch]
+  X2 --> G0{Hợp lệ?}
+  G0 -- Không --> X3[Reject/quarantine file + thông báo] --> Xe((Kết thúc lỗi))
+  G0 -- Có --> X4[Normalize external reference, fee, amount]
+  X4 --> X5[3-way match: expected ledger ↔ statement ↔ bank]
+  X5 --> G1{Kết quả?}
+  G1 -- Exact match --> X6[Post settlement/fee entries]
+  G1 -- Partial/missing/duplicate/unknown --> X7[Tạo ReconciliationCase]
+  X7 --> X8[Kế toán điều tra với chứng từ]
+  X8 --> G2{Resolution?}
+  G2 -- Đối tác sửa/chuyển bù --> X9[Import adjustment settlement]
+  G2 -- Mapping sai nội bộ --> X10[Post adjustment có approval]
+  G2 -- Chưa xử lý --> X11[Giữ OPEN + aging/SLA]
+  X9 --> X12[Re-match]
+  X10 --> X12
+  X12 --> G1
+  X6 --> X13[Cập nhật aging/dashboard]
+  X11 --> X13
+  X13 --> G3{Còn case mở?}
+  G3 -- Không --> X14[Close batch]
+  G3 -- Có --> X15[Close processing run, batch PARTIAL]
+  X14 --> Ee((Kết thúc))
+  X15 --> Ee
+

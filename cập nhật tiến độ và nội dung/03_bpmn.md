@@ -1,8 +1,26 @@
 # BPMN 2.0 — ba quy trình Order-to-Cash
 
+## Cách đọc sơ đồ BPMN
+
+BPMN là cách vẽ một quy trình giống như lưu đồ nhưng có quy tắc rõ hơn:
+
+- **Pool** là một tổ chức độc lập, ví dụ Shop, Khách hàng hoặc Đơn vị vận chuyển.
+- **Lane** là một vai trò/bộ phận bên trong tổ chức, ví dụ Kho hoặc Kế toán.
+- **Task** là một việc cần làm, thường đặt tên bằng động từ như “Kiểm tra tồn”.
+- **Event** là việc đã xảy ra, ví dụ “Đã nhận thanh toán”. Hình tròn thường biểu diễn event.
+- **Gateway** là điểm rẽ nhánh theo điều kiện, ví dụ “Còn hàng không?”. Hình thoi thường biểu diễn gateway.
+- **Sequence flow** là thứ tự công việc bên trong cùng một pool.
+- **Message flow** là thông điệp gửi giữa hai pool, ví dụ PSP gửi thông báo đã trả tiền cho Shop.
+
+Ba sơ đồ được tách theo ba câu hỏi: xử lý một đơn mới thế nào; xử lý hàng quay về thế nào; và kiểm tra tiền cuối cùng thế nào.
+
 > Các sơ đồ dưới đây là blueprint hiển thị trong Markdown. Khi vẽ bằng bpmn.io/Visual Paradigm phải dùng đúng ký pháp BPMN 2.0: pool cho participant độc lập, lane cho vai trò nội bộ, sequence flow chỉ trong một pool và message flow giữa các pool. Không nối sequence flow xuyên pool.
 
 ## 1. BPMN-01 — Đặt hàng, thanh toán COD/QR và fulfillment
+
+### Giải thích bằng lời
+
+Khách gửi đơn. Shop kiểm tra thông tin và hỏi phân hệ Kho xem còn hàng không. Nếu hết hàng, đơn dừng. Nếu còn hàng, Kho tạm giữ số lượng cần mua. Với COD, hệ thống ghi nhận số tiền cần thu khi giao. Với QR, hệ thống tạo mã QR và chỉ xác nhận đơn sau khi nhận được thông báo thanh toán hợp lệ. Nếu khách không trả đúng hạn, hàng tạm giữ được trả lại kho. Sau khi đơn được xác nhận, kho đóng gói và hệ thống yêu cầu đơn vị vận chuyển tạo vận đơn.
 
 ### 1.1 Đặc tả
 
@@ -15,7 +33,7 @@
 | End success | Shipment `HANDED_OVER`, Order `FULFILLING`; QR `PAID` hoặc COD receivable `EXPECTED` |
 | End alternate | Order `CANCELLED`; reservation được release; payment intent expired/failed |
 | Data | Order, Reservation, Payment, Shipment, OutboxEvent |
-| Requirement | FR-01…FR-06, NFR-02, NFR-04 |
+| Requirement | FR-01, FR-02, FR-03, FR-04; EXT-01; NFR-03, NFR-04 |
 
 ### 1.2 Blueprint
 
@@ -65,6 +83,15 @@ flowchart LR
 
 ## 2. BPMN-02 — Giao thất bại/RTO và đổi-trả sau giao
 
+### Giải thích bằng lời
+
+Phần này có hai trường hợp dễ bị nhầm:
+
+- **Chuyển hoàn do giao thất bại (RTO):** khách chưa nhận hàng và shop chưa hoàn tất giao.
+- **Khách trả/đổi hàng:** khách đã nhận hàng rồi mới gửi lại.
+
+Cả hai đều làm kiện hàng quay về kho, nhưng ý nghĩa về tiền và trạng thái đơn khác nhau. Hàng về phải được quét mã và kiểm tra chất lượng. Chỉ hàng đạt yêu cầu mới được cộng lại vào số có thể bán.
+
 ### 2.1 Đặc tả
 
 | Thuộc tính | Nội dung |
@@ -76,7 +103,7 @@ flowchart LR
 | Pre-condition | Có Order + Shipment; với return phải còn trong policy giả định |
 | End success | Retry scheduled, hoặc RTO/Return được nhận–QC–restock/quarantine và tiền/đơn được điều chỉnh |
 | End alternate | Return rejected có lý do; discrepancy/manual case nếu hàng/tiền không khớp |
-| Requirement | FR-07…FR-09, NFR-02, NFR-06, NFR-08 |
+| Requirement | FR-05, FR-06, FR-07; REQ-COD-01, REQ-COD-03; EXT-02; NFR-03, NFR-06, NFR-08 |
 
 ### 2.2 Blueprint
 
@@ -123,6 +150,10 @@ flowchart TD
 
 ## 3. BPMN-03 — Đối soát COD/QR và xử lý chênh lệch
 
+### Giải thích bằng lời
+
+Kế toán không nên chỉ tin một file do đối tác gửi. Hệ thống so ba nguồn: số tiền nội bộ dự kiến phải nhận, bảng kê của đơn vị vận chuyển/PSP và số tiền thực tế vào ngân hàng. Nếu cả ba khớp, giao dịch được đóng. Nếu lệch, hệ thống mở một hồ sơ chênh lệch để có người chịu trách nhiệm xử lý và lưu bằng chứng.
+
 ### 3.1 Đặc tả
 
 | Thuộc tính | Nội dung |
@@ -133,7 +164,7 @@ flowchart TD
 | Pre-condition | Expected ledger đã có order_id, external_ref, amount và payment method |
 | End success | Batch closed; các dòng matched hoặc có case có owner/SLA |
 | Data | Statement, StatementLine, PaymentEntry, Shipment, Settlement, ReconciliationCase |
-| Requirement | FR-10…FR-13, NFR-06, NFR-08 |
+| Requirement | FR-08, FR-09, FR-10, FR-11; REQ-COD-02; EXT-03; NFR-06, NFR-08 |
 
 ### 3.2 Blueprint
 
@@ -166,6 +197,8 @@ flowchart LR
 ```
 
 ### 3.3 Luật matching
+
+`Matching` nghĩa là tìm và ghép các dòng nói về cùng một giao dịch. Việc ghép phải ưu tiên mã giao dịch/mã vận đơn; không ghép chỉ vì hai dòng có cùng số tiền, vì nhiều đơn có thể trùng giá trị.
 
 1. Khóa ưu tiên: provider + external transaction/tracking reference; không match chỉ bằng số tiền.
 2. COD expected = số phải thu khách; carrier statement = COD collected − carrier fees; bank settlement = tiền thực nhận. Phí phải là entry riêng.

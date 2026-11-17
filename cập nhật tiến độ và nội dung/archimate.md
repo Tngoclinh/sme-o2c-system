@@ -1,3 +1,5 @@
+> **Bản nháp lịch sử:** giữ để xem quá trình làm bài. Bản dùng để nộp và đã đối chiếu slide là `02_archimate_chuan_hoa.md`.
+
 1. Motivation
 
 Góc nhìn Motivation mô tả nguyên nhân hình thành kiến trúc và các yêu cầu cần giải quyết.
@@ -102,7 +104,7 @@ Sáu gói công việc (Work Package) đi qua ba Plateau: Baseline → Transitio
 
 4. ##  Technology (ArchiMate)
 
-Với khoảng 200-500 đơn/ngày, một máy chủ ứng dụng và một cơ sở dữ liệu quan hệ là đủ; kiến trúc không cần cụm hay hàng đợi tách riêng (ràng buộc SME ngân sách thấp, ADR-01). Dưới đây là cấu hình đích, kèm cột cho môi trường mô phỏng dùng trong prototype.
+Với khoảng 100–300 đơn/ngày, một máy chủ ứng dụng và một cơ sở dữ liệu quan hệ là đủ; kiến trúc không cần cụm hay hàng đợi tách riêng (ràng buộc SME ngân sách thấp, ADR-01). Dưới đây là cấu hình đích, kèm cột cho môi trường mô phỏng dùng trong prototype.
 
 ### **4.1 Node, System Software và Technology Service**
 

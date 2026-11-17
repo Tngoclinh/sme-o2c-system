@@ -1,0 +1,34 @@
+flowchart LR
+  subgraph C[Pool: Khách hàng]
+    C0((Bắt đầu)) --> C1[Nhập giỏ hàng, địa chỉ, COD/QR] --> C2[Gửi đơn]
+    C8[Quét QR] --> C9[Nhận xác nhận/tracking]
+  end
+  subgraph S[Pool: SME O2C]
+    S1[Validate đơn] --> G1{Đủ tồn?}
+    G1 -- Không --> Sx[Hủy đơn / báo hết hàng]
+    G1 -- Có --> S2[Atomic reservation]
+    S2 --> G2{Phương thức?}
+    G2 -- COD --> S3[Tạo COD receivable EXPECTED]
+    G2 -- QR --> S4[Tạo Payment Intent + reference]
+    S5[Catch message: payment.paid] --> S6[Confirm Order]
+    S4 -. timer hết hạn .-> S7[Expire intent; release reservation]
+    S3 --> S6
+    S6 --> S8[Pick & pack] --> S9[Commit stock / tạo shipment] --> S10[Outbox tạo vận đơn]
+    S11[Nhận tracking code] --> Se((Kết thúc))
+  end
+  subgraph P[Pool: PSP]
+    P1[Hiển thị/xử lý QR] --> P2[Callback có chữ ký + external_ref]
+  end
+  subgraph L[Pool: ĐVVC]
+    L1[Nhận yêu cầu tạo vận đơn] --> L2[Trả tracking code]
+  end
+  C2 -. Order message .-> S1
+  S4 -. QR payload .-> C8
+  C8 -. Payment request .-> P1
+  P2 -. Payment callback .-> S5
+  Sx -. Out-of-stock .-> C9
+  S7 -. Payment expired .-> C9
+  S10 -. Create shipment .-> L1
+  L2 -. Shipment response .-> S11
+  S11 -. Confirmation .-> C9
+

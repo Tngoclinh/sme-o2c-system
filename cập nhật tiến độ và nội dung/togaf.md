@@ -1,6 +1,8 @@
+> **Bản nháp lịch sử:** giữ để xem quá trình làm bài. Bản dùng để nộp là `01_togaf_chuan_hoa.md`; không dùng bộ mã yêu cầu trong tệp này.
+
 1. Kiến trúc đề xuất  
 1.  Bối cảnh giả định (ghi rõ trong báo cáo)  
-* SME bán đồ quần áo, khoảng 200-500 đơn/ngày, bán qua website. Khoảng 70% đơn là COD, khoảng 15–20% đơn thất bại/hoàn. Đây là giả định, cần ghi rõ và có thể tìm nguồn tham khảo.  
+* SME bán hàng gia dụng, khoảng 100–300 đơn/ngày, bán qua website. Tỷ lệ COD và giao thất bại/hoàn chỉ là giả định kiểm thử, không phải số liệu khảo sát.
 * Hiện trạng (Baseline): nhập đơn bằng Excel/Zalo, tồn kho ghi tay, đối soát bằng file Excel bảng kê của ĐVVC vào cuối tháng.
 
 Để bài toán đủ cụ thể, tôi đề xuất một SME bán lẻ trực tuyến với các giả định sau:
@@ -13,7 +15,7 @@
 | Kho hàng | 1 kho trung tâm |
 | Thanh toán | COD và chuyển khoản QR |
 | Vận chuyển | 1 đối tác vận chuyển giả lập |
-| Quy mô | Khoảng 200–500 đơn/ngày |
+| Quy mô | Khoảng 100–300 đơn/ngày |
 | Bất thường | Nhiều đơn giao thất bại, hoàn hàng và chậm đối soát |
 | Hiện trạng | Quản lý đơn trên website, tồn kho bằng bảng tính, đối soát COD thủ công |
 

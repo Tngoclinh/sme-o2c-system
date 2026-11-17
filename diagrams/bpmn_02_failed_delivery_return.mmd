@@ -1,0 +1,31 @@
+flowchart TD
+  E0((Message start)) --> G0{Loại sự kiện?}
+  G0 -- Giao thất bại --> A1[Ghi delivery attempt idempotent]
+  A1 --> G1{Còn lượt giao và khách đồng ý?}
+  G1 -- Có --> A2[Đặt lịch giao lại] --> Ea((Chờ lần giao mới))
+  G1 -- Không --> A3[Yêu cầu chuyển hoàn / Shipment RETURNING]
+  G0 -- Return/Exchange request --> B1[Kiểm tra eligibility]
+  B1 --> G2{Hợp lệ?}
+  G2 -- Không --> Bx[Từ chối, ghi lý do] --> Ex((Kết thúc))
+  G2 -- Có --> B2[Tạo RMA + hướng dẫn gửi hàng]
+  A3 --> C1[ĐVVC trả kiện]
+  B2 --> C1
+  C1 --> C2[Kho scan tracking/RMA, nhận vào QC]
+  C2 --> G3{QC result?}
+  G3 -- Bán lại được --> C3[StockEntry RESTOCK]
+  G3 -- Lỗi/hỏng --> C4[StockEntry QUARANTINE]
+  C3 --> G4{Nguồn và yêu cầu?}
+  C4 --> G4
+  G4 -- QR chưa giao/RTO hoặc trả hàng --> D1[Tạo refund theo approval]
+  G4 -- COD đã thu, trả hàng --> D2[Tạo nghĩa vụ hoàn tiền]
+  G4 -- Đổi hàng --> D3[Reserve SKU thay thế + tạo shipment mới]
+  G4 -- COD chưa thu/RTO --> D4[Đóng COD expected = uncollected]
+  D1 --> D5[Nhận refund callback]
+  D2 --> D6[Record payout reference]
+  D3 --> D7[Link replacement order]
+  D4 --> D8[Đóng RMA/RTO]
+  D5 --> D8
+  D6 --> D8
+  D7 --> D8
+  D8 --> Ee((Kết thúc))
+
