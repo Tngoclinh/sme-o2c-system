@@ -1,0 +1,367 @@
+% Biên dịch khuyến nghị: xelatex bao_cao_tong_hop.tex (chạy 2 lần để cập nhật mục lục)
+\documentclass[12pt,a4paper]{report}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Termes}
+\setsansfont{TeX Gyre Heros}
+\usepackage{longtable,booktabs,tabularx,array,multirow}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{microtype}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black,citecolor=blue!50!black}
+\setlength{\parindent}{1.2cm}
+\setlength{\parskip}{0.25em}
+\renewcommand{\arraystretch}{1.2}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\lstset{basicstyle=\ttfamily\small,breaklines=true,frame=single,columns=fullflexible}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Order-to-Cash cho SME thương mại điện tử}
+\rhead{BTL Kiến trúc HTTT và ứng dụng}
+\cfoot{\thepage}
+\sloppy
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+{\large TRƯỜNG/VIỆN: \underline{\hspace{8cm}}\par}
+\vspace{1.2cm}
+{\large HỌC PHẦN: KIẾN TRÚC CÁC HỆ THỐNG THÔNG TIN VÀ ỨNG DỤNG\par}
+\vspace{1.5cm}
+\HRule\\[0.5cm]
+{\Huge\bfseries THIẾT KẾ HỆ THỐNG ORDER-TO-CASH\\CHO SME THƯƠNG MẠI ĐIỆN TỬ\par}
+\vspace{0.3cm}
+{\Large COD, QR, vận chuyển, đối soát và đổi trả\par}
+\HRule\\[1.5cm]
+\begin{tabular}{ll}
+Nhóm sinh viên: & Linh -- Phương -- Huyền\\
+Giảng viên: & \underline{\hspace{7cm}}\\
+Ngày cập nhật: & 17/11/2026
+\end{tabular}
+\vfill
+{\large Hà Nội, 2026\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\listoftables
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Mở đầu}
+
+\section{Bài toán}
+Đề tài thiết kế luồng Order-to-Cash cho một SME bán quần áo trên website, có một kho và một đối tác vận chuyển giả lập. Hệ thống phải bao phủ đặt hàng, tồn kho, COD/QR, vận chuyển, đối soát và đổi trả. Trọng tâm bất thường là giao thất bại, chuyển hoàn, sai lệch tiền và sai lệch tồn kho. Quy mô 200--500 đơn/ngày, tỷ lệ COD 70\% và thất bại/hoàn 15--20\% là giả định thiết kế, không phải số liệu thống kê ngành.
+
+\section{Phạm vi}
+Trong phạm vi gồm: order capture; reservation; QR/COD; pick--pack--handover; tracking; retry/RTO; return/exchange; QC; refund; COD/QR reconciliation; discrepancy và reporting. Ngoài phạm vi gồm procurement, nhiều kho, marketplace, general ledger, tối ưu tuyến giao, production HA và tích hợp pháp lý hóa đơn điện tử.
+
+\section{Phương pháp và chuẩn tham chiếu}
+TOGAF Standard, 10th Edition tổ chức Architecture Vision, bốn miền kiến trúc, gap và roadmap. ArchiMate 3.2 mô hình hóa tổng quan và quan hệ xuyên lớp. BPMN 2.0.2 mô tả chi tiết collaboration. ISO/IEC 25010:2023 hỗ trợ phân loại thuộc tính chất lượng. OpenAPI mô tả HTTP API; OWASP API Security Top 10 hỗ trợ rà soát bảo mật. VietQRPay/NAPAS là căn cứ nghiệp vụ cho QR có mã tham chiếu và đối soát; prototype chỉ dùng PSP giả lập.
+
+\chapter{TOGAF và Architecture Vision}
+
+\section{Request for Architecture Work}
+\begin{longtable}{p{0.25\textwidth}p{0.67\textwidth}}
+\toprule
+\textbf{Thuộc tính} & \textbf{Nội dung}\\
+\midrule\endhead
+Sponsor & Chủ doanh nghiệp SME.\\
+Vấn đề & Dữ liệu đơn--tồn--giao--tiền phân tán; COD thủ công; QR chưa gắn chắc với đơn; RTO/đổi trả làm lệch tồn và tiền.\\
+Mục tiêu & Kiến trúc đích và lộ trình O2C xuyên suốt, kiểm soát ngoại lệ và truy vết tài chính.\\
+Tổ chức & Sales/CSKH, kho, kế toán, IT; khách hàng, carrier và PSP/ngân hàng là external actor.\\
+Ràng buộc & Một website, một kho, một carrier và một PSP giả lập; ngân sách và đội ngũ SME.\\
+Đầu ra & TOGAF, năm ArchiMate viewpoint, ba BPMN, bốn ADR, risk/traceability và prototype.\\
+\bottomrule
+\end{longtable}
+
+\section{Vision, stakeholder và mục tiêu}
+Vision là một nền tảng tích hợp, trong đó từng đơn được truy vết từ tạo đơn, giữ chỗ, thanh toán COD/QR, giao nhận, đổi trả đến khi tiền và tồn kho được đối soát. Kiến trúc ưu tiên đơn giản, audit và idempotency.
+
+\begin{table}[H]
+\centering
+\caption{Stakeholder và concern}
+\begin{tabularx}{\textwidth}{p{0.22\textwidth}YY}
+\toprule
+\textbf{Stakeholder} & \textbf{Concern} & \textbf{Đầu ra trả lời}\\
+\midrule
+Chủ doanh nghiệp & Chi phí, tiền về, thất bại/hoàn & Vision, KPI, roadmap, dashboard\\
+Khách hàng & Đơn đúng, trả tiền an toàn, đổi trả rõ & BPMN-01/02, order timeline\\
+Kho & Reservation, xuất/nhập/QC không trùng & Inventory ledger, BPMN-01/02\\
+Kế toán & COD/QR, phí, refund, discrepancy & BPMN-03, reconciliation view\\
+IT & Bảo mật, phục hồi, vận hành đơn giản & Technology view, ADR, risk\\
+Carrier/PSP & Contract, callback, reference & Adapters và message flows\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{longtable}{p{0.27\textwidth}p{0.65\textwidth}}
+\caption{Goal và KPI thiết kế}\\
+\toprule
+\textbf{Goal} & \textbf{Outcome/KPI}\\
+\midrule\endfirsthead
+\toprule\textbf{Goal} & \textbf{Outcome/KPI}\\\midrule\endhead
+G-01 Tự động hóa O2C & Ít nhất 95\% đơn hợp lệ đi qua prototype không nhập lại dữ liệu.\\
+G-02 Kiểm soát COD/QR & Mọi payment/settlement có order ID và external reference; lệch thành case.\\
+G-03 Tồn chính xác & Không oversell trong concurrency test; mọi thay đổi có StockEntry.\\
+G-04 Kiểm soát RTO/return & Mọi RTO/return có shipment/RMA, QC và disposition.\\
+G-05 Truy vết/phục hồi & Callback lặp không tạo bút toán kép; lỗi được retry/manual queue.\\
+\bottomrule
+\end{longtable}
+
+\section{Nguyên tắc}
+\begin{enumerate}[label=P-0\arabic*]
+\item Single Source of Truth theo Order, Inventory, Payment, Shipment, Return và Reconciliation.
+\item Ledger cho kho và tiền; sửa sai bằng entry đảo/điều chỉnh.
+\item Idempotent at-least-once integration với external event ID và unique constraint.
+\item API-first và anti-corruption adapter cho carrier/PSP.
+\item Security/privacy by design: RBAC, TLS, secret store, tối thiểu dữ liệu, audit.
+\item SME simplicity: modular monolith và PostgreSQL; chưa tách microservices/broker khi chưa có số đo.
+\end{enumerate}
+
+\section{Yêu cầu chức năng}
+\begin{longtable}{p{0.12\textwidth}p{0.35\textwidth}p{0.43\textwidth}}
+\toprule
+\textbf{ID} & \textbf{Yêu cầu} & \textbf{Acceptance tóm tắt}\\
+\midrule\endhead
+FR-01 & Order lifecycle & Tạo/xác nhận/hủy/tra cứu với transition hợp lệ.\\
+FR-02 & Reservation & Atomic reserve/release/commit; không âm available.\\
+FR-03 & QR & Payment intent, reference, callback/poll xác thực.\\
+FR-04 & COD & Expected receivable gắn shipment/order.\\
+FR-05 & Fulfillment & Pick/pack/handover và tracking.\\
+FR-06 & Carrier event & Mapping canonical; duplicate không có side effect.\\
+FR-07 & Delivery failure/RTO & Retry policy; hết lượt chuyển hoàn.\\
+FR-08 & Return/exchange & RMA, eligibility, QC và disposition.\\
+FR-09 & QR refund & Refund tham chiếu payment/return, có approval/status.\\
+FR-10 & COD reconciliation & Expected--carrier statement--bank settlement.\\
+FR-11 & QR reconciliation & Payment ledger--PSP statement--bank settlement/refund.\\
+FR-12 & Discrepancy & Case, owner, evidence, resolution và audit.\\
+FR-13 & Reporting & COD aging, QR settlement, failure/RTO/return, quarantine.\\
+\bottomrule
+\end{longtable}
+
+\section{Yêu cầu phi chức năng}
+\begin{longtable}{p{0.12\textwidth}p{0.22\textwidth}p{0.54\textwidth}}
+\toprule
+\textbf{ID} & \textbf{Thuộc tính} & \textbf{Measure}\\
+\midrule\endhead
+NFR-01 & Hiệu năng & 50 virtual users, p95 GET order dưới 2 giây, error dưới 1\%.\\
+NFR-02 & Reliability & 10 callback lặp chỉ tạo một effective ledger/event entry.\\
+NFR-03 & Availability & Target 99.5\%/tháng; prototype có health/restart proof.\\
+NFR-04 & Recoverability & Retry exponential, manual queue, không mất request.\\
+NFR-05 & Security & RBAC, callback verification, rate limit, secret ngoài code.\\
+NFR-06 & Auditability & Actor/source/time/correlation/reference cho mọi thay đổi tiền/tồn.\\
+NFR-07 & Maintainability & Module không ghi trực tiếp bảng module khác.\\
+NFR-08 & Financial integrity & Settlement + fee + refund + discrepancy giải thích expected.\\
+NFR-09 & Privacy & Mask PII trong log và field-level access.\\
+\bottomrule
+\end{longtable}
+
+\section{Baseline--Target--Gap và Roadmap}
+\begin{longtable}{p{0.16\textwidth}p{0.24\textwidth}p{0.27\textwidth}p{0.23\textwidth}}
+\toprule
+\textbf{Miền} & \textbf{Baseline} & \textbf{Target} & \textbf{Gap/WP}\\
+\midrule\endhead
+Order & Web xuất file & OMS lifecycle/correlation & WP1\\
+Inventory & Bảng tính/trừ lùi & Reservation + ledger + QC & WP1, WP4\\
+COD & Dò statement cuối kỳ & Ledger + 3-way match + aging & WP3\\
+QR & Transfer khó gắn đơn & Intent/reference/callback/refund & WP2, WP3\\
+Shipping & Theo dõi tay & API, signed webhook, RTO & WP2, WP4\\
+Return & Chat rời rạc & RMA, QC, disposition & WP4\\
+Technology & File/máy cá nhân & Monolith, PostgreSQL, audit/backup & WP0, WP5\\
+\bottomrule
+\end{longtable}
+
+Roadmap: WP0 Foundation $\rightarrow$ WP1 Order/Inventory $\rightarrow$ WP2 Payment/Shipping $\rightarrow$ WP3 Reconciliation và WP4 Reverse Logistics $\rightarrow$ WP5 Hardening/Reporting $\rightarrow$ WP6 Pilot/Cutover.
+
+\chapter{ArchiMate 3.2}
+
+\section{Quy ước}
+Assignment gán active structure cho behavior; Realization nối process/function tới service và data object tới business object; Serving mô tả dịch vụ lớp dưới phục vụ lớp trên; Access mô tả đọc/ghi; Triggering mô tả trước--sau nhân quả; Flow chỉ dùng khi truyền dữ liệu, tiền hoặc hàng và phải có nhãn.
+
+\section{Motivation viewpoint}
+Stakeholder gồm Owner, Customer, Accountant, Warehouse, CSKH và IT. Driver gồm tăng đơn online, giao thất bại/RTO, khó đối soát COD/QR, lệch tồn và kỳ vọng đổi trả. Assessment gồm dữ liệu phân tán, không correlation ID, trạng thái trộn và thiếu audit. Outcomes hiện thực G-01--G-05; principles ảnh hưởng FR/NFR; requirements hiện thực outcomes. View chỉ hiển thị nhóm requirement quan trọng, còn traceability matrix giữ mapping đầy đủ.
+
+\section{Business viewpoint}
+\begin{longtable}{p{0.28\textwidth}p{0.25\textwidth}p{0.36\textwidth}}
+\toprule
+\textbf{Business Process} & \textbf{Service} & \textbf{Business Object}\\
+\midrule\endhead
+P1 Capture/Confirm Order & Order Placement & Order, Payment Instruction\\
+P2 Reserve/Fulfill & Fulfillment & Reservation, Stock Record\\
+P3 Collect/Confirm Payment & Payment & Payment, QR Reference, COD Receivable\\
+P4 Deliver/Handle Failure & Delivery Tracking & Shipment, Delivery Attempt\\
+P5 Return/Exchange/QC & Return/Exchange & RMA, Returned Item, QC Result\\
+P6 Reconcile/Close & Reconciliation & Statement, Settlement, Discrepancy Case\\
+\bottomrule
+\end{longtable}
+
+\section{Application viewpoint}
+\begin{longtable}{p{0.23\textwidth}p{0.30\textwidth}p{0.35\textwidth}}
+\toprule
+\textbf{Component} & \textbf{Function} & \textbf{Application Service}\\
+\midrule\endhead
+Storefront/Backoffice & Customer/Admin Interaction & Order UI, Operations UI\\
+Order & Order Lifecycle & Order Management\\
+Inventory & Reservation/Stock Ledger & Inventory\\
+Payment & Intent/Payment Ledger & Payment\\
+Shipping & Shipment Lifecycle & Shipping\\
+Return & RMA/Disposition & Return\\
+Reconciliation & Matching/Case/Analytics & Reconciliation, Reporting\\
+Carrier/PSP Adapter & External Translation & Integration Services\\
+\bottomrule
+\end{longtable}
+
+State ownership được tách: Order không chứa shipment state; Reservation có ACTIVE/COMMITTED/RELEASED/EXPIRED; Payment có PENDING/PAID/FAILED/EXPIRED/REFUNDED; Shipment có CREATED/HANDED\_OVER/IN\_TRANSIT/DELIVERED/FAILED/RETURNING/RETURNED; RMA có REQUESTED đến CLOSED. StockEntry và PaymentEntry là append-only.
+
+\section{Technology và Migration viewpoints}
+Cloud VM được mô hình là Node; compute là Device; Linux, reverse proxy, Python runtime, PostgreSQL DBMS và scheduler/worker là System Software; package, schema, statement, backup và log là Artifact. TLS ingress, relational storage, scheduled execution, backup/restore và logging/monitoring là Technology Service phục vụ Application Components. Carrier API và PSP API là External Node qua HTTPS.
+
+Baseline, Transition 1, Transition 2 và Target được hiện thực bởi WP0--WP6. Work Package hiện thực Deliverable; Deliverable hiện thực Plateau; Gap liên kết Work Package; Triggering thể hiện dependency.
+
+\chapter{BPMN 2.0}
+
+\section{BPMN-01: Order--Payment--Fulfillment}
+Trigger là customer submit order. SME validate và atomic reserve. Nếu hết tồn, hủy và báo khách. Với COD, hệ thống tạo expected receivable; với QR, tạo payment intent/reference và chờ signed callback. Timer hết hạn làm expire và release reservation. Sau xác nhận, kho pick/pack, commit stock, outbox tạo shipment; carrier trả tracking. Thành công kết thúc ở Shipment HAND\-ED\_OVER và Order FULFILLING.
+
+Ký pháp bắt buộc: XOR cho tồn/phương thức; intermediate message catch cho payment; interrupting timer boundary cho QR timeout; message flow giữa Customer--SME--PSP--Carrier; không dùng sequence flow xuyên pool.
+
+\section{BPMN-02: Delivery Failure, RTO và Return/Exchange}
+Hai trigger được tách: carrier gửi delivery failure trước khi delivered; hoặc customer tạo return/exchange sau delivered. Nếu còn lượt giao và khách đồng ý, đặt lịch retry; nếu không, shipment RETURNING. Return request phải qua eligibility rồi tạo RMA. Khi kiện về, kho scan tracking/RMA, nhận vào QC; pass thì RESTOCK, fail thì QUARANTINE. QR/RTO hoặc return tạo refund; COD đã thu tạo payout obligation; exchange reserve SKU thay thế; COD chưa thu đóng expected là uncollected.
+
+\section{BPMN-03: Reconciliation}
+Carrier/PSP/bank gửi statement/settlement. SME hash file, kiểm schema và batch trùng, normalize reference/fee/amount, rồi match ba chiều. Exact match tạo settlement/fee entries. Missing, partial, duplicate hoặc unknown tạo ReconciliationCase. Kế toán điều tra bằng chứng và nhận adjustment settlement hoặc post approved adjustment. Batch là MATCHED, PARTIAL hoặc DISCREPANT; case mở đi vào aging/SLA.
+
+\chapter{Architecture Decision Records}
+
+\section{ADR-01: Modular monolith}
+Chọn một deployable chứa các module có ownership riêng. Lợi ích là transaction và vận hành đơn giản; nhược điểm là scale và blast radius theo toàn ứng dụng. Xem lại khi có số đo tải hoặc nhu cầu release độc lập.
+
+\section{ADR-02: Reservation và inventory ledger}
+Chọn PostgreSQL transaction/compare-and-update, unique order--SKU reservation và append-only StockEntry. Invariant: on-hand bằng tổng available, reserved, allocated, QC và quarantine; không âm ngoài approved adjustment. Hàng hoàn chỉ restock sau QC pass.
+
+\section{ADR-03: Inbox/Outbox và idempotency}
+Domain change và OutboxEvent commit cùng transaction. Worker retry exponential. Callback ghi InboxEvent unique theo provider/external event ID sau xác thực signature/token/timestamp. Sự kiện lỗi quá ngưỡng vào manual queue. Đổi lại, hệ thống chấp nhận eventual consistency.
+
+\section{ADR-04: Ledger và three-way reconciliation}
+Payment Ledger chứa EXPECTED, COLLECTED/PAID, SETTLED, FEE, REFUND và ADJUSTMENT. Reconciliation so expected ledger, provider statement và bank settlement. Mismatch trở thành case; adjustment bắt buộc actor, reason, evidence và approval.
+
+\chapter{Kiểm chứng}
+
+\section{Rủi ro chính}
+\begin{longtable}{p{0.10\textwidth}p{0.36\textwidth}p{0.43\textwidth}}
+\toprule
+\textbf{ID} & \textbf{Rủi ro} & \textbf{Kiểm soát}\\
+\midrule\endhead
+R-01 & Hai đơn giữ tồn cuối & Atomic reservation, unique key, concurrency test.\\
+R-02 & Callback lặp & Inbox key, idempotent handler, ledger invariant.\\
+R-03 & Callback giả mạo & TLS, signature/token, timestamp, rate limit.\\
+R-04 & Callback mất/sai thứ tự & Outbox/inbox, state guard, polling/manual queue.\\
+R-05 & RTO nhập hai lần/chưa QC đã bán & Unique scan, QC state, append-only entry.\\
+R-06 & Settlement sai/thiếu/trùng & Three-way match, hash, case, approval.\\
+R-07 & Lộ PII/vượt quyền & RBAC, BOLA/BFLA tests, mask log.\\
+R-08 & Mất DB/VM & Backup, restore drill, health check.\\
+\bottomrule
+\end{longtable}
+
+\section{Test trọng tâm}
+\begin{longtable}{p{0.12\textwidth}p{0.36\textwidth}p{0.42\textwidth}}
+\toprule
+\textbf{TC} & \textbf{Stimulus} & \textbf{Expected}\\
+\midrule\endhead
+TC-01 & QR happy path & Paid, stock committed, shipment handover, correlation xuyên suốt.\\
+TC-02 & Callback giống nhau 10 lần & Một effective payment entry; duplicate no-op.\\
+TC-03 & 20 reserve cho available=5 & 5 success, 15 conflict, balance không âm.\\
+TC-04 & Carrier 5xx ba lần & Lần bốn đúng một shipment, retry log đầy đủ.\\
+TC-05 & COD expected 500k, bank/statement 480k & Discrepancy 20k, không tự sửa ledger.\\
+TC-06 & Scan một RTO hai lần & Một receive, một QC/restock.\\
+TC-07 & CS gọi adjustment & HTTP 403, không đổi ledger, có audit.\\
+TC-08 & Restore backup & Count/checksum order và ledger khớp.\\
+TC-09 & Shipment event cũ đến sau delivered & Lưu event nhưng không rollback state.\\
+TC-10 & QR timeout race callback & Một kết quả hợp lệ theo lock và policy.\\
+\bottomrule
+\end{longtable}
+
+\section{Traceability mẫu}
+\begin{longtable}{p{0.13\textwidth}p{0.21\textwidth}p{0.25\textwidth}p{0.14\textwidth}p{0.14\textwidth}}
+\toprule
+\textbf{Req} & \textbf{Business} & \textbf{Application} & \textbf{ADR} & \textbf{Test}\\
+\midrule\endhead
+FR-02 & P2 Reserve/Fulfill & Inventory Service & 02 & 03,10\\
+FR-03 & P3 Payment & Payment/PSP Adapter & 03,04 & 01,02\\
+FR-07 & P4/P5 & Shipping/Return & 02,03 & 06,09\\
+FR-10/11 & P6 Reconcile & Reconciliation & 04 & 05\\
+NFR-02 & Integration & Inbox/ledger & 02,03 & 02,03,06\\
+NFR-05 & All & RBAC/adapters & 03 & 07\\
+NFR-08 & P6 & Ledger/case & 04 & 05,08\\
+\bottomrule
+\end{longtable}
+
+\chapter{Prototype}
+
+\section{Phạm vi và kiến trúc}
+Prototype dùng FastAPI modular monolith, SQLite cho demo và PostgreSQL là target, UI tối giản, mock PSP/carrier và DB-backed outbox worker. Hai lát cắt là QR happy path và COD failure--RTO--QC--reconciliation. Non-goal gồm production UI, tích hợp thật, HA và general ledger.
+
+\section{API chính}
+\begin{longtable}{p{0.36\textwidth}p{0.19\textwidth}p{0.34\textwidth}}
+\toprule
+\textbf{Method/path} & \textbf{Role} & \textbf{Mục đích}\\
+\midrule\endhead
+\code{POST /api/orders} & Customer/CS & Tạo order và reserve.\\
+\code{GET /api/orders/\{id\}} & Customer/CS & Order detail/timeline.\\
+\code{POST /orders/\{id\}/payments/qr-intents} & Customer & QR intent/reference.\\
+\code{POST /api/webhooks/psp} & PSP & Signed/idempotent payment callback.\\
+\code{POST /orders/\{id\}/fulfill} & Warehouse & Pick/pack và shipment outbox.\\
+\code{POST /api/webhooks/carrier} & Carrier & Shipment canonical event.\\
+\code{POST /api/returns} & Customer/CS & RMA.\\
+\code{POST /returns/\{id\}/receive} & Warehouse & Receive RTO/return.\\
+\code{POST /returns/\{id\}/qc} & Warehouse & QC/disposition.\\
+\code{POST /payments/\{id\}/refunds} & Accountant & Refund.\\
+\code{POST /reconciliation/batches} & Accountant & Import statement.\\
+\code{POST /reconciliation/cases/\{id\}/resolve} & Accountant & Resolve/adjust.\\
+\bottomrule
+\end{longtable}
+
+HTTP contract: 400 input; 401 auth/signature; 403 role; 404 not visible/not found; 409 state/idempotency/stock conflict; 422 business mapping; 429 rate limit; 503 dependency. Error body luôn có machine-readable code và correlation ID, không có stack trace/PII.
+
+\section{UI và demo}
+UI gồm Dashboard, Order Detail với bốn badge Order/Payment/Shipment/Return, Inventory ledger, Return/QC, Reconciliation Workbench và Integration Monitor.
+
+Demo QR: seed 10; order 2; reservation active và available 8; payment callback gửi hai lần nhưng một entry; fulfill và tracking; PSP/bank settlement match. Demo COD: expected 300k; hai delivery failures rồi RETURNING; duplicate event no-op; QC pass và một restock; statement có wrong return fee 20k tạo case; accountant resolve bằng approved adjustment.
+
+\chapter{Kết luận}
+Thiết kế đã khép kín Order-to-Cash cho cả COD và QR, đồng thời phân biệt rõ delivery refusal/RTO với return/exchange sau giao. Các invariant quan trọng được đặt tại module sở hữu: atomic reservation và stock ledger, payment ledger và three-way reconciliation, inbox/outbox và idempotent callback. Kiến trúc modular monolith giữ độ phức tạp phù hợp SME nhưng vẫn có ranh giới đủ rõ để kiểm thử và tách sau này nếu số đo yêu cầu.
+
+\begin{thebibliography}{9}
+\bibitem{togaf} The Open Group, ``Understanding the TOGAF Standard'', \url{https://help.opengroup.org/hc/en-us/articles/32726995273362-Understanding-the-TOGAF-Standard}.
+\bibitem{archimate} The Open Group, ``ArchiMate Certification Exam Q\&A -- Version 3.2'', \url{https://help.opengroup.org/hc/en-us/articles/32115890396562-ArchiMate-Certification-Exam-Q-As}.
+\bibitem{archimate101} The Open Group ArchiMate Community, ``ArchiMate 101'', \url{https://archimate-community.pages.opengroup.org/workgroups/archimate-101/}.
+\bibitem{bpmn} Object Management Group, ``BPMN Version 2.0.2'', \url{https://www.omg.org/spec/BPMN/2.0.2/PDF}.
+\bibitem{iso25010} ISO, ``ISO/IEC 25010:2023'', \url{https://www.iso.org/standard/78176.html}.
+\bibitem{vietqr} NAPAS Developer, ``VietQRPay'', \url{https://developer.napas.com.vn/vi/product/introduce/viet-qr-pay}.
+\bibitem{ghn} GHN, ``Callback trạng thái đơn hàng'', \url{https://api.ghn.vn/home/docs/detail?id=84}.
+\bibitem{openapi} OpenAPI Initiative, ``OpenAPI Specification 3.1'', \url{https://spec.openapis.org/oas/v3.1}.
+\bibitem{owasp} OWASP, ``API Security Top 10 -- 2023'', \url{https://api-security.owasp.org/editions/2023/en/0x11-t10/}.
+\end{thebibliography}
+
+\appendix
+\chapter{Checklist bàn giao}
+\begin{itemize}
+\item Thay tên trường, giảng viên, mã lớp và MSSV trên trang bìa.
+\item Xuất ba BPMN từ công cụ BPMN 2.0 thành PDF/SVG và chèn vào chương BPMN.
+\item Vẽ năm ArchiMate viewpoint bằng công cụ hỗ trợ ArchiMate 3.2, không chỉ dùng bảng catalog.
+\item Đính kèm report test, screenshot demo và OpenAPI trong phụ lục.
+\item Chạy XeLaTeX hai lần và rà soát cảnh báo overfull/table.
+\end{itemize}
+
+\end{document}
+
