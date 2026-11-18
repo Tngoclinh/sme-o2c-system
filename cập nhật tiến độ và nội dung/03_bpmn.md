@@ -10,7 +10,7 @@ BPMN là cách vẽ một quy trình giống như lưu đồ nhưng có quy tắ
 - **Event** là việc đã xảy ra, ví dụ “Đã nhận thanh toán”. Hình tròn thường biểu diễn event.
 - **Gateway** là điểm rẽ nhánh theo điều kiện, ví dụ “Còn hàng không?”. Hình thoi thường biểu diễn gateway.
 - **Sequence flow** là thứ tự công việc bên trong cùng một pool.
-- **Message flow** là thông điệp gửi giữa hai pool, ví dụ PSP gửi thông báo đã trả tiền cho Shop.
+- **Message flow** là thông điệp gửi giữa hai pool, ví dụ Ngân hàng/Đơn vị cung cấp thanh toán QR gửi thông báo đã trả tiền cho Shop.
 
 Ba sơ đồ được tách theo ba câu hỏi: xử lý một đơn mới thế nào; xử lý hàng quay về thế nào; và kiểm tra tiền cuối cùng thế nào.
 
@@ -20,19 +20,19 @@ Ba sơ đồ được tách theo ba câu hỏi: xử lý một đơn mới thế
 
 ### Giải thích bằng lời
 
-Khách gửi đơn. Shop kiểm tra thông tin và hỏi phân hệ Kho xem còn hàng không. Nếu hết hàng, đơn dừng. Nếu còn hàng, Kho tạm giữ số lượng cần mua. Với COD, hệ thống ghi nhận số tiền cần thu khi giao. Với QR, hệ thống tạo mã QR và chỉ xác nhận đơn sau khi nhận được thông báo thanh toán hợp lệ. Nếu khách không trả đúng hạn, hàng tạm giữ được trả lại kho. Sau khi đơn được xác nhận, kho đóng gói và hệ thống yêu cầu đơn vị vận chuyển tạo vận đơn.
+Khách gửi đơn. Shop tính `tổng tiền khách trả = tiền hàng sau giảm giá + phí vận chuyển thu khách`, rồi hỏi phân hệ Kho xem còn hàng không. Nếu hết hàng, đơn dừng. Nếu còn hàng, Kho tạm giữ số lượng cần mua. Với COD, hệ thống tạo khoản phải thu đúng bằng tổng đơn và gửi chính số đó cho ĐVVC. Với QR, Ngân hàng/Đơn vị cung cấp thanh toán QR tạo và quản lý Payment Intent đúng bằng tổng đơn; hệ thống chỉ xác nhận sau thông báo thanh toán hợp lệ. Khi tạo vận đơn QR, COD amount bằng 0 nên ĐVVC không thu thêm tiền tại cửa.
 
 ### 1.1 Đặc tả
 
 | Thuộc tính | Nội dung |
 |---|---|
 | Trigger | Customer submit order |
-| Pool | Khách hàng; SME O2C; PSP; ĐVVC |
+| Pool | Khách hàng; SME O2C; Ngân hàng/Đơn vị cung cấp thanh toán QR; ĐVVC |
 | Lane SME | Storefront/Order; Payment; Inventory; Warehouse/Shipping |
 | Pre-condition | SKU có dữ liệu tồn và phương thức thanh toán hợp lệ |
 | End success | Shipment `HANDED_OVER`, Order `FULFILLING`; QR `PAID` hoặc COD receivable `EXPECTED` |
 | End alternate | Order `CANCELLED`; reservation được release; payment intent expired/failed |
-| Data | Order, Reservation, Payment, Shipment, OutboxEvent |
+| Data | Order (item subtotal, customer shipping charge, grand total), Reservation, Payment/COD Receivable, Shipment, OutboxEvent |
 | Requirement | FR-01, FR-02, FR-03, FR-04; EXT-01; NFR-03, NFR-04 |
 
 ### 1.2 Blueprint
@@ -44,26 +44,29 @@ flowchart LR
     C8[Quét QR] --> C9[Nhận xác nhận/tracking]
   end
   subgraph S[Pool: SME O2C]
-    S1[Validate đơn] --> G1{Đủ tồn?}
+    S1[Validate đơn; tính item + phí giao khách trả] --> G1{Đủ tồn?}
     G1 -- Không --> Sx[Hủy đơn / báo hết hàng]
     G1 -- Có --> S2[Atomic reservation]
     S2 --> G2{Phương thức?}
-    G2 -- COD --> S3[Tạo COD receivable EXPECTED]
-    G2 -- QR --> S4[Tạo Payment Intent + reference]
+    G2 -- COD --> S3[Tạo COD receivable = grand total]
+    G2 -- QR --> S4[Yêu cầu Đơn vị QR tạo intent = grand total]
+    S4a[Nhận QR payload]
     S5[Catch message: payment.paid] --> S6[Confirm Order]
     S4 -. timer hết hạn .-> S7[Expire intent; release reservation]
     S3 --> S6
-    S6 --> S8[Pick & pack] --> S9[Commit stock / tạo shipment] --> S10[Outbox tạo vận đơn]
+    S6 --> S8[Pick & pack] --> S9[Commit stock / tạo shipment] --> S10[Outbox tạo vận đơn: COD=grand total; QR=0]
     S11[Nhận tracking code] --> Se((Kết thúc))
   end
-  subgraph P[Pool: PSP]
-    P1[Hiển thị/xử lý QR] --> P2[Callback có chữ ký + external_ref]
+  subgraph P[Pool: Ngân hàng/Đơn vị cung cấp QR]
+    P1[Tạo, hiển thị và quản lý QR] --> P2[Callback có chữ ký + external_ref]
   end
   subgraph L[Pool: ĐVVC]
     L1[Nhận yêu cầu tạo vận đơn] --> L2[Trả tracking code]
   end
   C2 -. Order message .-> S1
-  S4 -. QR payload .-> C8
+  S4 -. Create intent request .-> P1
+  P1 -. QR payload .-> S4a
+  S4a -. Hiển thị QR .-> C8
   C8 -. Payment request .-> P1
   P2 -. Payment callback .-> S5
   Sx -. Out-of-stock .-> C9
@@ -80,6 +83,7 @@ flowchart LR
 - Interrupting timer boundary trên subprocess `Chờ thanh toán QR`; khi hết hạn phải expire payment intent và release reservation.
 - Service task webhook phải xác thực chữ ký/token và idempotency key trước khi ghi payment ledger.
 - Message flow đến ĐVVC; outbox retry nằm trong pool SME, không vẽ sequence flow đi xuyên pool.
+- Với COD, `shipment.cod_amount = order.grand_total`; với QR, `shipment.cod_amount = 0`. Giả định Đơn vị QR không thu phí.
 
 ## 2. BPMN-02 — Giao thất bại/RTO và đổi-trả sau giao
 
@@ -98,7 +102,7 @@ Cả hai đều làm kiện hàng quay về kho, nhưng ý nghĩa về tiền v�
 |---|---|
 | Trigger A | Carrier gửi `delivery_failed` hoặc `delivery_refused` |
 | Trigger B | Customer tạo return/exchange request sau `DELIVERED` |
-| Pool | Khách hàng; SME O2C; ĐVVC/PSP |
+| Pool | Khách hàng; SME O2C; ĐVVC/Ngân hàng hoặc Đơn vị cung cấp thanh toán QR |
 | Lane SME | Shipping/CSKH; Return; Warehouse/QC; Payment/Inventory |
 | Pre-condition | Có Order + Shipment; với return phải còn trong policy giả định |
 | End success | Retry scheduled, hoặc RTO/Return được nhận–QC–restock/quarantine và tiền/đơn được điều chỉnh |
@@ -146,48 +150,60 @@ flowchart TD
 - Policy prototype: tối đa 02 delivery attempts; return request trong 07 ngày; các con số là giả định cấu hình.
 - Chỉ restock sau khi scan đúng tracking/RMA và QC pass. QC fail vào quarantine, không tăng available-to-promise.
 - Refund là một payment transaction mới tham chiếu giao dịch gốc, không sửa/xóa payment entry cũ.
-- Message/callback lặp từ carrier/PSP phải bị khử trùng theo external event ID.
+- Message/callback lặp từ ĐVVC/Đơn vị QR phải bị khử trùng theo external event ID.
 
 ## 3. BPMN-03 — Đối soát COD/QR và xử lý chênh lệch
 
 ### Giải thích bằng lời
 
-Kế toán không nên chỉ tin một file do đối tác gửi. Hệ thống so ba nguồn: số tiền nội bộ dự kiến phải nhận, bảng kê của đơn vị vận chuyển/PSP và số tiền thực tế vào ngân hàng. Nếu cả ba khớp, giao dịch được đóng. Nếu lệch, hệ thống mở một hồ sơ chênh lệch để có người chịu trách nhiệm xử lý và lưu bằng chứng.
+Kế toán không nên chỉ tin một file do đối tác gửi. Với COD, cuối tháng shop nhận bảng kê ĐVVC, đối chiếu sơ bộ `expected ↔ collected` và xử lý dòng chưa khớp; sau đó ĐVVC chuyển toàn bộ tiền đã thu. Shop dùng tiền vào ngân hàng làm nguồn thứ ba để kiểm tra và đóng kỳ. Phí dịch vụ vận chuyển là một luồng riêng: ĐVVC xuất hóa đơn tháng, shop kiểm tra theo vận đơn/biểu phí rồi thanh toán riêng, tuyệt đối không khấu trừ hoặc net-off vào COD. Với QR, hệ thống so Payment Ledger, bảng kê Đơn vị QR và tiền vào ngân hàng; giả định phí QR bằng 0.
 
 ### 3.1 Đặc tả
 
 | Thuộc tính | Nội dung |
 |---|---|
-| Trigger | Carrier/PSP statement và bank settlement được nhận theo kỳ |
-| Pool | Carrier/PSP/Bank; SME O2C |
+| Trigger | Cuối kỳ tháng nhận COD statement/remittance, QR statement/bank credit hoặc carrier service invoice |
+| Pool | ĐVVC; Ngân hàng/Đơn vị cung cấp thanh toán QR; Ngân hàng; SME O2C |
 | Lane SME | Import/Validation; Matching Engine; Accountant; Reporting |
 | Pre-condition | Expected ledger đã có order_id, external_ref, amount và payment method |
 | End success | Batch closed; các dòng matched hoặc có case có owner/SLA |
-| Data | Statement, StatementLine, PaymentEntry, Shipment, Settlement, ReconciliationCase |
+| Data | CODStatement, CODRemittance, QRStatement, PaymentEntry, Shipment, CarrierInvoice, ShopPayment, ReconciliationCase |
 | Requirement | FR-08, FR-09, FR-10, FR-11; REQ-COD-02; EXT-03; NFR-06, NFR-08 |
 
 ### 3.2 Blueprint
 
 ```mermaid
 flowchart LR
-  X0((Message start)) --> X1[Nhận statement/settlement]
+  X0((Đến kỳ tháng)) --> X1[Nhận hồ sơ đối soát theo loại]
   X1 --> X2[Hash file + kiểm schema/trùng batch]
   X2 --> G0{Hợp lệ?}
   G0 -- Không --> X3[Reject/quarantine file + thông báo] --> Xe((Kết thúc lỗi))
-  G0 -- Có --> X4[Normalize external reference, fee, amount]
-  X4 --> X5[3-way match: expected ledger ↔ statement ↔ bank]
+  G0 -- Có --> Gt{Loại hồ sơ?}
+  Gt -- COD --> C1[So sơ bộ expected ↔ carrier collected]
+  C1 --> C2{Sơ bộ khớp?}
+  C2 -- Có --> C3[Xác nhận bảng kê; chờ gross remittance]
+  C3 --> C4[Nhận bank credit]
+  C4 --> X5[Final 3-way match]
+  C2 -- Không --> X7
+  Gt -- QR --> Q1[Match ledger ↔ QR statement ↔ bank credit]
+  Q1 --> X5
+  Gt -- Hóa đơn ĐVVC --> F1[So vận đơn + biểu phí ↔ hóa đơn]
+  F1 --> F2{Hóa đơn đúng?}
+  F2 -- Có --> F3[Phê duyệt và shop thanh toán riêng]
+  F2 -- Không --> X7[Tạo ReconciliationCase]
   X5 --> G1{Kết quả?}
-  G1 -- Exact match --> X6[Post settlement/fee entries]
+  G1 -- Exact match --> X6[Post collected/paid/remitted entries]
   G1 -- Partial/missing/duplicate/unknown --> X7[Tạo ReconciliationCase]
   X7 --> X8[Kế toán điều tra với chứng từ]
   X8 --> G2{Resolution?}
-  G2 -- Đối tác sửa/chuyển bù --> X9[Import adjustment settlement]
+  G2 -- Đối tác sửa/chuyển bù --> X9[Ghi nhận remittance/credit bổ sung]
   G2 -- Mapping sai nội bộ --> X10[Post adjustment có approval]
   G2 -- Chưa xử lý --> X11[Giữ OPEN + aging/SLA]
   X9 --> X12[Re-match]
   X10 --> X12
-  X12 --> G1
+  X12 --> Gt
   X6 --> X13[Cập nhật aging/dashboard]
+  F3 --> X13
   X11 --> X13
   X13 --> G3{Còn case mở?}
   G3 -- Không --> X14[Close batch]
@@ -201,10 +217,11 @@ flowchart LR
 `Matching` nghĩa là tìm và ghép các dòng nói về cùng một giao dịch. Việc ghép phải ưu tiên mã giao dịch/mã vận đơn; không ghép chỉ vì hai dòng có cùng số tiền, vì nhiều đơn có thể trùng giá trị.
 
 1. Khóa ưu tiên: provider + external transaction/tracking reference; không match chỉ bằng số tiền.
-2. COD expected = số phải thu khách; carrier statement = COD collected − carrier fees; bank settlement = tiền thực nhận. Phí phải là entry riêng.
-3. QR expected/paid/refund lấy từ Payment Ledger; PSP statement và bank settlement là hai nguồn độc lập.
-4. Tolerance prototype bằng 0 VND; mọi lệch tiền tạo case. Có thể cấu hình tolerance sau nếu nghiệp vụ phê duyệt.
-5. File trùng được nhận biết bằng provider + batch_id và hash; dòng trùng bằng provider + external_ref + entry_type.
+2. COD expected = tổng tiền đơn gồm phí vận chuyển thu khách; carrier statement = đúng số COD ĐVVC đã thu. Sau đối chiếu sơ bộ, bank remittance phải bằng toàn bộ COD phải chuyển; final match đủ ba nguồn mới đóng kỳ. Không trừ carrier fee trong ba số này.
+3. Hóa đơn phí ĐVVC được kiểm riêng theo shipment/tracking, biểu phí và phụ phí; shop thanh toán bằng một luồng tiền ra riêng. `CustomerShippingCharge` không phải `CarrierShippingExpense`.
+4. QR expected/paid/refund lấy từ Payment Ledger; bảng kê Đơn vị QR và tiền vào ngân hàng là hai nguồn độc lập. Giả định phí QR bằng 0.
+5. Tolerance prototype bằng 0 VND; mọi lệch tiền tạo case. Có thể cấu hình tolerance sau nếu nghiệp vụ phê duyệt.
+6. File trùng được nhận biết bằng provider + batch_id và hash; dòng trùng bằng provider + external_ref + entry_type.
 
 ## 4. Checklist chuẩn BPMN
 
@@ -212,7 +229,7 @@ flowchart LR
 - Gateway chia nhánh có điều kiện gắn trên outgoing sequence flow; nhánh default được đánh dấu.
 - Message event dùng cho callback/statement; timer event dùng cho QR expiry, retry và SLA.
 - Data object liên kết bằng data association, không dùng sequence flow.
-- Pool black-box của PSP/ĐVVC vẫn đủ message flow; không mô tả quy trình nội bộ không biết của đối tác.
+- Pool black-box của Đơn vị QR/ĐVVC vẫn đủ message flow; không mô tả quy trình nội bộ không biết của đối tác.
 - Tên task theo cấu trúc động từ + đối tượng; tên event là điều đã xảy ra.
 
 Tham chiếu: [OMG BPMN 2.0.2](https://www.omg.org/spec/BPMN/2.0.2/PDF).

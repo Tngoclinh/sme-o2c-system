@@ -42,7 +42,7 @@ ADR không khẳng định phương án được chọn là tốt nhất cho m�
 - **Trigger xem lại:** contention DB đã được đo là bottleneck hoặc chuyển sang multi-warehouse.
 - **Trace:** FR-02, FR-07, REQ-COD-03, NFR-03, NFR-06, G-04.
 
-## ADR-03 — Inbox/Outbox và idempotency cho PSP/ĐVVC
+## ADR-03 — Inbox/Outbox và idempotency cho Đơn vị QR/ĐVVC
 
 **Nói đơn giản:** Lưu thông điệp nhận vào và cần gửi ra trong cơ sở dữ liệu. Nếu mạng lỗi hoặc đối tác gửi lặp, hệ thống có thể thử lại mà không tạo đơn, vận đơn hay khoản tiền trùng.
 
@@ -56,18 +56,19 @@ ADR không khẳng định phương án được chọn là tốt nhất cho m�
 - **Trigger xem lại:** throughput/event latency vượt DB polling hoặc cần fan-out lớn; khi đó đánh giá broker nhưng giữ idempotent consumer.
 - **Trace:** FR-04, FR-05, FR-06, EXT-01, NFR-03, NFR-04, NFR-05.
 
-## ADR-04 — Ledger và đối soát ba chiều cho COD/QR
+## ADR-04 — Đối soát COD gross và hóa đơn vận chuyển tách riêng
 
-**Nói đơn giản:** Không chỉ gắn nhãn “đã thanh toán” lên đơn. Hệ thống phải có sổ ghi từng khoản phải thu, đã thu, phí, đã chuyển và hoàn tiền; sau đó so sánh với bảng kê đối tác và ngân hàng.
+**Nói đơn giản:** Tiền khách trả và chi phí giao hàng của shop là hai luồng khác nhau. ĐVVC chuyển đủ tiền COD đã thu; hóa đơn phí vận chuyển được kiểm tra và thanh toán riêng, không trừ vào COD.
 
 - **Status:** Accepted.
-- **Context:** Statement của carrier/PSP không đủ để chứng minh tiền thực nhận; sửa trực tiếp payment status làm mất audit và không biểu diễn phí/refund.
-- **Decision drivers:** financial integrity, explainability, dispute handling, hai phương thức thanh toán.
-- **Options:** status trên Order; match hai chiều statement–order; ledger + three-way reconciliation.
-- **Decision:** Payment Ledger lưu entry EXPECTED, COLLECTED/PAID, SETTLED, FEE, REFUND, ADJUSTMENT; Reconciliation so khớp expected ledger ↔ provider statement ↔ bank settlement. Mismatch tạo case; adjustment cần actor, reason, evidence và approval.
-- **Consequences tích cực:** giải thích được số dư/công nợ; hỗ trợ COD và QR; không che mất chênh lệch.
-- **Consequences tiêu cực:** nhập statement và bank feed; matching phức tạp; cần quy tắc cut-off.
-- **Trigger xem lại:** kết nối kế toán tổng hợp hoặc PSP hỗ trợ settlement real-time chuẩn hóa; vẫn giữ ledger là source of truth.
+- **Context:** Shop thu của khách `grand_total = tiền hàng sau giảm giá + phí vận chuyển thu khách`. ĐVVC vừa thu hộ COD vừa cung cấp dịch vụ giao hàng, nên nếu trừ phí thẳng vào COD sẽ khó phân biệt thiếu tiền với chi phí. Bảng kê đối tác một mình cũng không chứng minh tiền thực nhận.
+- **Decision drivers:** toàn vẹn tài chính, dễ giải thích, kiểm soát chênh lệch, đúng chính sách hóa đơn tháng và hai phương thức thanh toán.
+- **Options:** (1) ĐVVC net-off phí vào COD; (2) chỉ lưu trạng thái đã thanh toán trên Order; (3) chuyển đủ COD gross, hóa đơn vận chuyển tách riêng và ledger + three-way reconciliation.
+- **Decision:** chọn phương án 3. Payment Ledger lưu `EXPECTED`, `COLLECTED/PAID`, `REMITTED`, `REFUND`, `ADJUSTMENT`; không ghi carrier invoice vào Payment Ledger. COD theo tháng: shop so sơ bộ expected theo đơn ↔ ĐVVC báo đã thu, xử lý mismatch; ĐVVC chuyển gross; bank credit hoàn thành đối soát ba chiều và đóng kỳ. CarrierInvoice được so riêng với shipment/tracking và biểu phí, sau đó shop thanh toán bằng dòng tiền ra riêng. QR intent bằng grand total, Đơn vị QR callback/bảng kê, giả định phí QR bằng 0; vận đơn QR có COD amount bằng 0. Mismatch tạo case; adjustment cần actor, reason, evidence và approval.
+- **Invariant:** `COD expected = COD collected = COD remitted + COD discrepancy`; `QR expected = QR paid = bank credited + QR discrepancy`; carrier invoice không xuất hiện trong hai phương trình này.
+- **Consequences tích cực:** biết khách đã trả đủ hay chưa; không nhầm phí ĐVVC thành thiếu COD; dễ kiểm tra hóa đơn/thanh toán riêng; hỗ trợ COD và QR.
+- **Consequences tiêu cực:** phải quản lý hai chu kỳ tháng độc lập (COD remittance và carrier invoice); cần import bảng kê, hóa đơn, bank feed và quy tắc cut-off.
+- **Trigger xem lại:** hợp đồng ĐVVC đổi sang net-off bắt buộc hoặc kết nối kế toán tổng hợp; khi đó tạo ADR mới và vẫn giữ các entry tách biệt.
 - **Trace:** FR-08, FR-09, FR-10, FR-11, REQ-COD-02, EXT-03, NFR-06, NFR-08, G-02.
 
 ## Decision log

@@ -53,8 +53,10 @@ Bộ tài liệu hiện đi đúng hướng thiết kế kiến trúc doanh nghi
 | Yêu cầu biến thể | Cách thiết kế xử lý | Bằng chứng |
 |---|---|---|
 | REQ-COD-01 giao thất bại/hoàn | Lưu từng DeliveryAttempt; retry theo policy; hết lượt chuyển RTO; nhận và QC | `03` BPMN-02, `05` TC-06/09 |
-| REQ-COD-02 đối soát COD | So khoản phải thu theo đơn, ĐVVC báo đã thu, tiền doanh nghiệp thực nhận; lệch thành case | `03` BPMN-03, ADR-04, TC-05 |
+| REQ-COD-02 đối soát COD | Theo tháng so COD gross theo đơn, ĐVVC báo đã thu và tiền gross chuyển về; carrier invoice kiểm/thanh toán riêng, không net-off | `03` BPMN-03, ADR-04, TC-05 |
 | REQ-COD-03 tồn hàng hoàn | Chỉ RESTOCK sau nhận vật lý + QC đạt; scan/event lặp là no-op | ADR-02, BPMN-02, TC-06 |
+
+Chính sách tài chính đã chốt: phí vận chuyển thu khách nằm trong grand total; COD thì ĐVVC thu đúng grand total, QR thì Ngân hàng/Đơn vị cung cấp thanh toán QR thu grand total và vận đơn có COD bằng 0. Giả định không có phí QR. ĐVVC xuất hóa đơn dịch vụ riêng cuối tháng để shop kiểm tra và thanh toán.
 
 ## 5. Việc bắt buộc trước khi nộp
 

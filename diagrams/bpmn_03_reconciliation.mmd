@@ -1,22 +1,34 @@
 flowchart LR
-  X0((Message start)) --> X1[Nhận statement/settlement]
+  X0((Đến kỳ tháng)) --> X1[Nhận hồ sơ đối soát theo loại]
   X1 --> X2[Hash file + kiểm schema/trùng batch]
   X2 --> G0{Hợp lệ?}
   G0 -- Không --> X3[Reject/quarantine file + thông báo] --> Xe((Kết thúc lỗi))
-  G0 -- Có --> X4[Normalize external reference, fee, amount]
-  X4 --> X5[3-way match: expected ledger ↔ statement ↔ bank]
+  G0 -- Có --> Gt{Loại hồ sơ?}
+  Gt -- COD --> C1[So sơ bộ expected ↔ carrier collected]
+  C1 --> C2{Sơ bộ khớp?}
+  C2 -- Có --> C3[Xác nhận bảng kê; chờ gross remittance]
+  C3 --> C4[Nhận bank credit]
+  C4 --> X5[Final 3-way match]
+  C2 -- Không --> X7
+  Gt -- QR --> Q1[Match ledger ↔ QR statement ↔ bank credit]
+  Q1 --> X5
+  Gt -- Hóa đơn ĐVVC --> F1[So vận đơn + biểu phí ↔ hóa đơn]
+  F1 --> F2{Hóa đơn đúng?}
+  F2 -- Có --> F3[Phê duyệt và shop thanh toán riêng]
+  F2 -- Không --> X7[Tạo ReconciliationCase]
   X5 --> G1{Kết quả?}
-  G1 -- Exact match --> X6[Post settlement/fee entries]
+  G1 -- Exact match --> X6[Post collected/paid/remitted entries]
   G1 -- Partial/missing/duplicate/unknown --> X7[Tạo ReconciliationCase]
   X7 --> X8[Kế toán điều tra với chứng từ]
   X8 --> G2{Resolution?}
-  G2 -- Đối tác sửa/chuyển bù --> X9[Import adjustment settlement]
+  G2 -- Đối tác sửa/chuyển bù --> X9[Ghi nhận remittance/credit bổ sung]
   G2 -- Mapping sai nội bộ --> X10[Post adjustment có approval]
   G2 -- Chưa xử lý --> X11[Giữ OPEN + aging/SLA]
   X9 --> X12[Re-match]
   X10 --> X12
-  X12 --> G1
+  X12 --> Gt
   X6 --> X13[Cập nhật aging/dashboard]
+  F3 --> X13
   X11 --> X13
   X13 --> G3{Còn case mở?}
   G3 -- Không --> X14[Close batch]

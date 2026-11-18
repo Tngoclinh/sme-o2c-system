@@ -22,13 +22,14 @@ Hai tệp gốc đã chọn hướng kiến trúc hợp lý cho SME: modular mon
 | RV-06 | High | Technology coi “máy chủ ứng dụng” vừa là Node vừa ghi `(Device)` và “lưu trữ/sao lưu” chỉ là service | Lẫn phần tử cấu trúc và hành vi | Mô hình VM là Node, DBMS/reverse proxy/runtime là System Software, file/backup là Artifact, các khả năng cung cấp ra là Technology Service |
 | RV-07 | Medium | Motivation chỉ có G-02/G-03, thiếu khách hàng, QR, đổi/trả và goal–outcome đầy đủ | Nhiều yêu cầu không có động lực | Hoàn chỉnh stakeholder, driver, assessment, goal, outcome, principle, requirement |
 | RV-08 | Medium | Trạng thái Order chứa trạng thái giao; StockEntry chứa “trạng thái tồn” | Mô hình dữ liệu dễ tạo trạng thái mâu thuẫn | Tách state machine Order, Payment, Shipment, Return; StockEntry là bút toán với reason/location/status |
-| RV-09 | Medium | “Đối soát 3 chiều” chưa nói rõ ba nguồn | Không kiểm thử được | Định nghĩa: expected receivable/Payment Ledger ↔ carrier/PSP statement ↔ bank settlement |
+| RV-09 | Medium | “Đối soát 3 chiều” chưa nói rõ ba nguồn | Không kiểm thử được | COD: expected ↔ ĐVVC báo thu ↔ tiền gross chuyển về; QR: ledger ↔ bảng kê Đơn vị QR ↔ ngân hàng |
 | RV-10 | Medium | NFR chưa có cách đo, điều kiện và nguồn bằng chứng | Không thể chứng minh | Chuẩn hóa theo stimulus–environment–response–measure và gắn test/ADR |
 | RV-11 | Low | Markdown dùng cấp tiêu đề và bảng không đồng nhất; ảnh base64 làm tệp rất lớn | Khó bảo trì/biên dịch | Tạo bản chuẩn hóa nhẹ; ảnh gốc vẫn được bảo toàn trong tệp cũ |
 | RV-12 | Critical | Bộ mã FR/NFR tự đặt khác bộ mã trong tài liệu hướng dẫn II-B | Dễ mất dấu truy vết và bị đánh giá không bám đề | Dùng nguyên FR-01…12, NFR-01…08 và REQ-COD-01…03; QR/đổi trả thêm mã EXT |
 | RV-13 | High | Thiếu Strategy viewpoint và các phần tử Constraint, Meaning, Value | Chưa phủ nội dung Chapter 6–7 | Bổ sung Resource, Capability, Value Stream, Course of Action và liên kết mục tiêu |
 | RV-14 | High | Application/Technology/Data chưa đủ interface, event, path và ba mức dữ liệu | Khó chứng minh đúng cấu trúc theo Chapter 4–5 | Bổ sung interface/collaboration/event, path/technology interface, conceptual–logical–physical data |
 | RV-15 | High | Chưa có nguồn slide bảo vệ 10–12 trang và ma trận đối chiếu đề | Thiếu sản phẩm bàn giao, khó tự kiểm tra | Tạo `08_doi_chieu_slide_va_de_bai.md` và `09_slide_bao_ve.md` |
+| RV-16 | Critical | Chưa tách phí giao khách trả, tiền COD và hóa đơn phí ĐVVC | Có thể coi thiếu COD là phí hoặc ghi khách chưa trả đủ | Grand total gồm phí giao khách trả; ĐVVC remittance đủ COD gross; carrier invoice xuất và thanh toán riêng theo tháng; QR fee giả định bằng 0 |
 
 ## 3. Cơ sở chuẩn dùng để rà soát
 
@@ -36,7 +37,7 @@ Hai tệp gốc đã chọn hướng kiến trúc hợp lý cho SME: modular mon
 - ArchiMate 3.2 được dùng cho phần tử và quan hệ; ArchiMate là mô hình tổng quan, còn BPMN 2.0.2 được dùng cho chi tiết quy trình.
 - ISO/IEC 25010:2023 được dùng làm khung phân loại chất lượng; các con số NFR là mục tiêu do nhóm đặt và phải kiểm chứng.
 - BPMN 2.0.2 của OMG được dùng cho collaboration, pool/lane, message flow, gateway và event.
-- VietQRPay/NAPAS là căn cứ cho QR merchant-presented, mã tham chiếu giao dịch và đối soát; prototype mô phỏng PSP, không tuyên bố tích hợp trực tiếp NAPAS.
+- VietQRPay/NAPAS là căn cứ cho QR merchant-presented và mã tham chiếu. Tài liệu dùng tác nhân tổng quát `Ngân hàng/Đơn vị cung cấp thanh toán QR`, có thể đại diện ngân hàng, cổng thanh toán, PSP hoặc mock; không tuyên bố NAPAS trực tiếp callback cho shop.
 
 ## 4. Tài liệu tham khảo chính
 

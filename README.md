@@ -6,7 +6,7 @@ Hệ thống được thiết kế cho một cửa hàng bán quần áo trực 
 
 1. Khách đặt hàng.
 2. Hệ thống kiểm tra và tạm giữ hàng trong kho.
-3. Khách chọn trả tiền khi nhận hàng (COD) hoặc quét mã QR.
+3. Hệ thống cộng phí vận chuyển hiển thị vào tổng đơn; khách chọn trả toàn bộ bằng COD hoặc QR.
 4. Kho đóng gói và giao kiện hàng cho đơn vị vận chuyển.
 5. Hệ thống theo dõi giao thành công, giao thất bại hoặc hàng bị trả về.
 6. Nếu khách đổi/trả, kho kiểm tra lại chất lượng hàng và quyết định nhập lại hay cách ly.
@@ -34,11 +34,13 @@ Thư mục `diagrams/` lưu nguồn Mermaid để review logic bằng Git. Trư�
 
 ### Tình huống A — Khách thanh toán QR thành công
 
-Khách đặt 2 áo → hệ thống tạm giữ 2 áo → khách quét QR → ngân hàng/đơn vị thanh toán báo đã nhận tiền → kho đóng gói → đơn vị vận chuyển nhận hàng → kế toán đối chiếu giao dịch QR với tiền vào ngân hàng.
+Khách đặt hàng → hệ thống tính tiền hàng + phí giao khách trả → khách quét QR do Ngân hàng/Đơn vị cung cấp thanh toán QR quản lý → bên này báo đã nhận đủ tổng đơn → vận đơn có COD bằng 0 → kế toán đối chiếu giao dịch QR với tiền vào ngân hàng.
 
 ### Tình huống B — Đơn COD giao không thành công
 
 Khách đặt hàng COD → kho giao kiện hàng cho đơn vị vận chuyển → giao thất bại → giao lại theo quy định → vẫn thất bại → kiện hàng quay về kho → kho kiểm tra → hàng tốt thì nhập lại → khoản COD được đóng là “chưa thu được”.
+
+Với đơn COD giao thành công, ĐVVC thu đúng tổng đơn gồm phí giao khách trả. Cuối tháng ĐVVC chuyển đủ tiền COD đã thu cho shop; hóa đơn phí dịch vụ vận chuyển được xuất và shop thanh toán riêng, không khấu trừ vào COD.
 
 ### Tình huống C — Khách trả hàng sau khi đã nhận
 

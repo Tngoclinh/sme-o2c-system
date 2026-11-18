@@ -42,10 +42,12 @@ Góc nhìn này trả lời “tại sao phải làm hệ thống”. Ví dụ, 
 | Principle | AP-01…AP-05 |
 | Requirement | FR-01…FR-12; NFR-01…NFR-08; REQ-COD-01…03; EXT-01…03 |
 | Constraint | C-01 01 website; C-02 01 kho trung tâm; C-03 01 ĐVVC; C-04 100–300 đơn/ngày; C-05 nguồn lực SME; C-06 đối tác ngoài được mock trong prototype |
-| Meaning | “Đã giao” không đồng nghĩa “đã nhận tiền”; “hàng đã về” không đồng nghĩa “hàng có thể bán” |
+| Meaning | “Đã giao” không đồng nghĩa “đã nhận tiền”; “hàng đã về” không đồng nghĩa “hàng có thể bán”; “phí khách trả trong đơn” không đồng nghĩa “hóa đơn phí ĐVVC của shop” |
 | Value | Giảm nhập lại dữ liệu; giảm tiền COD treo; tránh bán hàng hoàn chưa QC; ngoại lệ có người chịu trách nhiệm |
 
 Quan hệ cốt lõi: Stakeholder `Association` Driver; Driver/Assessment `Influence` Goal; Outcome `Realization` Goal; Principle/Constraint `Influence` Requirement; Requirement `Realization` Outcome. Meaning giải thích đối tượng và Value mô tả lợi ích. View chỉ hiển thị nhóm requirement liên quan để tránh quá tải, còn matrix giữ quan hệ đầy đủ.
+
+Trong mọi view, `Ngân hàng/Đơn vị cung cấp thanh toán QR` là một External Actor/Node tổng quát, có thể là ngân hàng có API, cổng thanh toán, PSP hoặc mock. Thành phần này tạo/quản lý QR và thông báo kết quả; không phải ĐVVC và không được mô hình như một module nội bộ của shop.
 
 ## 3. Viewpoint B — Strategy
 
@@ -55,7 +57,7 @@ Góc nhìn Strategy trong bài giảng nối mục tiêu kinh doanh với năng 
 
 | Loại | Phần tử |
 |---|---|
-| Resource | Nhân viên bán hàng/CSKH; nhân viên kho; kế toán; dữ liệu đơn–tồn–giao–tiền; hợp đồng ĐVVC/PSP; nền tảng ứng dụng |
+| Resource | Nhân viên bán hàng/CSKH; nhân viên kho; kế toán; dữ liệu đơn–tồn–giao–tiền; hợp đồng ĐVVC/Đơn vị QR; nền tảng ứng dụng |
 | Capability | C-01 Điều phối đơn; C-02 Kiểm soát tồn; C-03 Quản lý giao và ngoại lệ; C-04 Nhận/QC hàng hoàn; C-05 Đối soát COD; C-06 Truy vết và báo cáo |
 | Value Stream | VS1 Tiếp nhận đơn → VS2 Xác nhận tiền/giữ hàng → VS3 Xuất và giao → VS4 Xử lý thất bại/hoàn → VS5 Đối soát và đóng đơn |
 | Course of Action | COA-01 Chuẩn hóa dữ liệu/trạng thái; COA-02 Xây O2C tích hợp nhưng gọn; COA-03 Tích hợp phục hồi/chống trùng; COA-04 Đối soát bằng ledger/case |
@@ -75,9 +77,11 @@ Góc nhìn này trả lời “bộ phận nào phối hợp với bộ phận n
 | Khách hàng | Người mua |
 | SME | Sales/CS, Warehouse, Accountant, Owner |
 | Đơn vị vận chuyển | Carrier |
-| PSP/Ngân hàng | Payment Provider |
+| Ngân hàng/Đơn vị cung cấp thanh toán QR | QR Payment Provider |
 
-Business Interface gồm `Website đặt hàng`, `Backoffice vận hành`, `Điểm bàn giao/nhận hoàn` và `Kênh tích hợp ĐVVC/PSP`. Contract gồm chính sách bán/đổi trả, thỏa thuận dịch vụ ĐVVC và quy tắc thanh toán. Representation gồm xác nhận đơn, nhãn vận chuyển, biên bản nhận hoàn và bảng kê đối soát. Product cung cấp cho khách hàng là `Dịch vụ mua hàng trực tuyến và giao tận nơi`.
+Business Interface gồm `Website đặt hàng`, `Backoffice vận hành`, `Điểm bàn giao/nhận hoàn` và `Kênh tích hợp ĐVVC/Đơn vị QR`. Contract gồm chính sách bán/đổi trả, biểu phí/thỏa thuận dịch vụ ĐVVC và quy tắc thanh toán. Representation gồm xác nhận đơn, nhãn vận chuyển, biên bản nhận hoàn, bảng kê COD, hóa đơn phí vận chuyển và bảng kê QR. Product cung cấp cho khách hàng là `Dịch vụ mua hàng trực tuyến và giao tận nơi`.
+
+Business Flow tiền được tách rõ: `Customer Payment/COD gross` đi từ khách hoặc ĐVVC về shop; `Carrier Invoice Payment` là dòng tiền shop trả ĐVVC theo hóa đơn tháng. ĐVVC phải chuyển đủ COD gross sau đối soát sơ bộ; CarrierInvoice không được net-off vào dòng COD. Với QR, Ngân hàng/Đơn vị QR thu grand total, giả định phí bằng 0 và ĐVVC không thu thêm tại cửa.
 
 ### 4.2 Behavior và service
 
@@ -85,10 +89,10 @@ Business Interface gồm `Website đặt hàng`, `Backoffice vận hành`, `Đi�
 |---|---|---|---|
 | P1 Capture & Confirm Order | Order Placement Service | Người mua, Sales/CS | Order, Payment Instruction |
 | P2 Reserve & Fulfill | Fulfillment Service | Warehouse | Order, Reservation, Stock Record |
-| P3 Collect/Confirm Payment | Payment Service | Accountant + PSP | Payment, QR Reference, COD Receivable |
+| P3 Collect/Confirm Payment | Payment Service | Accountant + Đơn vị QR/ĐVVC | Payment, QR Reference, COD Receivable |
 | P4 Deliver & Handle Failure | Delivery Tracking Service | Carrier + Sales/CS | Shipment, Delivery Attempt |
 | P5 Return/Exchange & QC | Return/Exchange Service | Sales/CS + Warehouse | RMA, Returned Item, QC Result |
-| P6 Reconcile & Close | Reconciliation Service | Accountant | Statement, Settlement, Discrepancy Case |
+| P6 Reconcile & Close | Reconciliation Service | Accountant | COD Statement, QR Statement, COD Remittance, Carrier Invoice, Discrepancy Case |
 
 Business Event `Order submitted` triggers P1; `Payment confirmed/COD accepted` triggers P2; `Parcel handed over` triggers P4; `Delivery failed/Return requested` triggers P5 theo biến thể; `Statement received` triggers P6. Flow ghi nhãn `order`, `parcel`, `payment`, `statement`, không dùng flow không nhãn.
 
@@ -110,7 +114,7 @@ Góc nhìn này trả lời “phần mềm nào hỗ trợ quy trình nào”. 
 | Return | RMA & Disposition | Return Service | P5 |
 | Reconciliation/Reporting | Matching, Case & Analytics | Reconciliation Service; Reporting Service | P6 |
 | Carrier Adapter | Carrier Translation | Carrier Integration Service | P2, P4, P6 |
-| PSP Adapter | PSP Translation | PSP Integration Service | P3, P5, P6 |
+| QR Payment Adapter | QR Provider Translation | QR Payment Integration Service | P3, P5, P6 |
 
 Quan hệ: Component `Assignment` Function; Function `Realization` Application Service; Application Service `Serving` Business Process; Function `Access` Data Object. Giữa component chỉ dùng `Serving` khi cung cấp chức năng, `Flow` khi cần nhấn mạnh dữ liệu/sự kiện truyền.
 
@@ -120,11 +124,11 @@ Quan hệ: Component `Assignment` Function; Function `Realization` Application S
 |---|---|---|
 | Orders/Operations API | Order/Inventory/Shipping → Storefront/Backoffice | order, reservation, shipment, return |
 | Carrier API Adapter | Carrier Adapter ↔ ĐVVC | create shipment, status webhook, COD statement |
-| PSP API Adapter | PSP Adapter ↔ PSP | QR intent, payment/refund callback, statement |
-| Statement Import | Reconciliation ← Kế toán/đối tác | CSV/XLSX statement và settlement reference |
+| QR Payment API Adapter | QR Payment Adapter ↔ Ngân hàng/Đơn vị QR | QR intent, payment/refund callback, statement |
+| Statement/Invoice Import | Reconciliation ← Kế toán/đối tác | COD/QR statement, remittance reference và carrier invoice |
 | Internal Module Contract | Component sở hữu → component cần dùng | lệnh đồng bộ trong transaction; domain event qua outbox |
 
-Application Collaboration `Order Fulfillment` gồm Order + Inventory + Shipping; `Financial Closing` gồm Payment + Reconciliation. Application Event như `OrderConfirmed`, `StockReserved`, `ShipmentDelivered/Failed/Returned`, `PaymentConfirmed` và `StatementImported` kích hoạt function kế tiếp. Inbox/outbox bảo đảm sự kiện gửi lặp không tạo tác dụng kép.
+Application Collaboration `Order Fulfillment` gồm Order + Inventory + Shipping; `Financial Closing` gồm Payment + Reconciliation. Application Event như `OrderConfirmed`, `StockReserved`, `ShipmentDelivered/Failed/Returned`, `PaymentConfirmed`, `MonthlyCODStatementImported`, `CODRemittanceReceived` và `CarrierInvoiceImported` kích hoạt function kế tiếp. Inbox/outbox bảo đảm sự kiện gửi lặp không tạo tác dụng kép.
 
 ### 5.3 Data Object và ownership
 
@@ -132,15 +136,16 @@ Mỗi loại dữ liệu có đúng một phân hệ chịu trách nhiệm chín
 
 | Data Object | Owner | Trạng thái chính / quy tắc |
 |---|---|---|
-| Order | Order | DRAFT → PENDING_PAYMENT/CONFIRMED → FULFILLING → COMPLETED/CANCELLED; không chứa shipment state |
+| Order | Order | Lưu item subtotal, customer shipping charge và grand total; DRAFT → PENDING_PAYMENT/CONFIRMED → FULFILLING → COMPLETED/CANCELLED; không chứa shipment state |
 | Reservation | Inventory | ACTIVE → COMMITTED/RELEASED/EXPIRED |
 | StockEntry | Inventory | Append-only: RESERVE, RELEASE, SHIP, RETURN_TO_QC, RESTOCK, QUARANTINE, ADJUST |
 | Payment | Payment | PENDING → AUTHORIZED/PAID/FAILED/EXPIRED → PARTIALLY_REFUNDED/REFUNDED |
-| PaymentEntry | Payment | Append-only expected/collected/settled/fee/refund/adjustment |
+| PaymentEntry | Payment | Append-only expected/collected/paid/remitted/refund/adjustment; giả định không có QR fee và không ghi carrier invoice vào đây |
 | Shipment | Fulfillment/Shipping | CREATED → HANDED_OVER → IN_TRANSIT → DELIVERED/FAILED → RETURNING/RETURNED |
 | ShipmentEvent | Fulfillment/Shipping | external_event_id unique, raw status + canonical status |
 | Return/RMA | Return | REQUESTED → APPROVED/REJECTED → IN_TRANSIT → RECEIVED → QC_PASSED/QC_FAILED → CLOSED |
-| Statement/Settlement | Reconciliation | IMPORTED → MATCHED/PARTIAL/DISCREPANT → CLOSED |
+| Statement/Remittance | Reconciliation | COD/QR statement và tiền chuyển về: IMPORTED → MATCHED/PARTIAL/DISCREPANT → CLOSED |
+| CarrierInvoice | Reconciliation | Hóa đơn phí vận chuyển tháng: RECEIVED → VERIFIED/DISPUTED → APPROVED → PAID; tách khỏi COD remittance |
 | ReconciliationCase | Reconciliation | OPEN → INVESTIGATING → RESOLVED/WRITTEN_OFF |
 | OutboxEvent/InboxEvent | Module phát/nhận | PENDING → SENT/PROCESSED/FAILED; idempotency key unique |
 
@@ -150,7 +155,7 @@ Business Object được Data Object tương ứng `Realization`; file CSV/PDF g
 
 | Mức | Mục đích | Nội dung trong bài |
 |---|---|---|
-| Khái niệm (conceptual) | Cho nghiệp vụ thấy khái niệm chính | Customer đặt Order; Order có OrderLine; Order giữ Stock; Order có Payment và Shipment; Shipment có DeliveryAttempt; Shipment/Order có Return; Payment/Shipment được đối soát trong ReconciliationCase |
+| Khái niệm (conceptual) | Cho nghiệp vụ thấy khái niệm chính | Customer đặt Order; Order có OrderLine và CustomerShippingCharge; Order có Payment và Shipment; Shipment có DeliveryAttempt; ĐVVC gửi CODStatement/CODRemittance và CarrierInvoice tách biệt; Payment/Shipment được đối soát trong ReconciliationCase |
 | Logic (logical) | Chỉ ra thực thể, khóa và quan hệ không phụ thuộc DB | Các đối tượng trong catalog trên; `order_id` là mã xuyên suốt; `external_event_id` và `tracking_code/RMA` có ràng buộc duy nhất phù hợp |
 | Vật lý (physical) | Chỉ ra cách lưu và bảo vệ | PostgreSQL schema theo module; transaction/unique constraint; ledger append-only; object storage cho chứng từ; index theo order/reference/time; backup và retention |
 
@@ -172,9 +177,9 @@ Góc nhìn này cho biết ứng dụng được triển khai ở đâu. Máy ch
 | Path | HTTPS path; DB connection path; backup path | Nối các node và ghi rõ kiểu truyền |
 | Technology Interface | Public HTTPS endpoint; private DB endpoint; backup endpoint | Điểm truy cập technology service |
 | Technology Service | TLS ingress; relational storage; scheduled execution; backup/restore; logging/monitoring | `Serving` Application Component |
-| External Node | Carrier API; PSP API | Kết nối HTTPS qua adapters |
+| External Node | Carrier API; QR Payment Provider API | Kết nối HTTPS qua adapters |
 
-Deployment target là một modular monolith sau reverse proxy, PostgreSQL và worker dùng chung codebase. Prototype có thể dùng SQLite và mock Carrier/PSP, nhưng đây là simplification của prototype, không phải target production.
+Deployment target là một modular monolith sau reverse proxy, PostgreSQL và worker dùng chung codebase. Prototype có thể dùng SQLite, mock Carrier và mock Ngân hàng/Đơn vị cung cấp thanh toán QR, nhưng đây là simplification của prototype, không phải target production.
 
 Technology Function gồm terminate TLS, execute application, persist transaction, schedule retry, collect log và backup/restore. Technology Process `Nightly Backup` tạo Artifact backup; Technology Event `Health Check Failed` kích hoạt cảnh báo/khởi động lại. Security mapping: RBAC cho backoffice; TLS; secret từ environment/secret store; allow-list/signature/token cho callback; rate limit; log masking; DB backup và restore test. Thiết kế lưu inbox/outbox trong DB nên không cần message broker riêng ở quy mô giả định.
 
@@ -190,7 +195,7 @@ Góc nhìn này là bản đồ triển khai. `Work Package` là một gói vi�
 | Giai đoạn 1 | WP-01 Chuẩn hóa dữ liệu và trạng thái | Từ điển dữ liệu, state model, RBAC, audit/correlation, nền tảng DB | Dữ liệu/quản trị |
 | Giai đoạn 1 | WP-02 Order + Inventory | OMS, reservation, stock ledger, chọn COD/QR | Order/inventory |
 | Giai đoạn 2 | WP-03 Shipping + Returns | Adapter, webhook/outbox, failed delivery/RTO, nhận hoàn/QC/đổi trả | Giao/hoàn/tích hợp |
-| Giai đoạn 3 | WP-04 COD Reconciliation | COD ledger, import, three-way match, discrepancy case; mở rộng QR | Kiểm soát tài chính |
+| Giai đoạn 3 | WP-04 COD Reconciliation | COD ledger, bảng kê/remittance tháng, three-way match, carrier invoice tách riêng, discrepancy case; mở rộng QR | Kiểm soát tài chính |
 | Target | WP-05 Reporting & Operational Controls | Dashboard, cảnh báo, backup/restore, monitoring, kiểm thử và pilot | Chất lượng/vận hành |
 
 Implementation Event gồm `M1 chuẩn hóa được phê duyệt`, `M2 đơn–tồn chạy thử`, `M3 luồng giao/hoàn chạy E2E`, `M4 đối soát COD đạt kiểm thử` và `M5 nghiệm thu pilot`. Work Package `Realization` Deliverable; Deliverable `Realization` Plateau; Gap `Association` Work Package; Triggering thể hiện dependency WP-01 → WP-02 → WP-03 → WP-04 → WP-05.

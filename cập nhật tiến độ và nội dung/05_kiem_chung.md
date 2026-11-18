@@ -28,10 +28,10 @@ Thang điểm Probability (P) và Impact (I): 1–5; Score = P×I. Residual là 
 | R-03 | Webhook giả mạo/sửa payload | 3 | 5 | 15 | TLS, signature/token, timestamp/replay window, rate limit, secret rotation | Security/IT | 6 |
 | R-04 | Callback mất hoặc sai thứ tự | 4 | 4 | 16 | Outbox/inbox, state transition guard, polling reconciliation, manual queue | Integration | 8 |
 | R-05 | Hàng RTO/return nhập kho hai lần hoặc chưa QC đã bán | 4 | 5 | 20 | Scan tracking/RMA unique, QC state, StockEntry append-only, quarantine | Warehouse | 6 |
-| R-06 | COD/QR settlement thiếu, trùng hoặc sai phí | 4 | 5 | 20 | 3-way matching, batch hash, case + aging, approval adjustment | Accountant | 8 |
+| R-06 | Thiếu COD remittance, net-off nhầm phí hoặc hóa đơn ĐVVC sai | 4 | 5 | 20 | Đối soát COD gross ba chiều; carrier invoice kiểm riêng theo vận đơn/biểu phí; case + aging | Accountant | 8 |
 | R-07 | Lộ PII/API quản trị vượt quyền | 3 | 5 | 15 | RBAC, BOLA/BFLA tests, mask log, least data, audit access | IT | 6 |
 | R-08 | DB/VM lỗi làm mất dữ liệu | 2 | 5 | 10 | Backup hằng ngày, restore drill, health check, transaction log, RPO/RTO | IT | 6 |
-Residual risk R-04/R-06 cần sponsor chấp nhận ở prototype vì không tích hợp carrier/PSP/bank thật.
+Residual risk R-04/R-06 cần sponsor chấp nhận ở prototype vì không tích hợp ĐVVC/Đơn vị QR/ngân hàng thật.
 
 ## 2. Quality attribute scenarios
 
@@ -40,10 +40,10 @@ Mỗi dòng mô tả: ai/cái gì tạo ra tác động → hệ thống đang �
 | ID | Source/Stimulus | Environment | Response | Measure | Proof |
 |---|---|---|---|---|---|
 | QA-01 | 50 users tra cứu order | Normal load, 10k orders | API trả đúng quyền | p95 <2s, errors <1% | k6/JMeter report |
-| QA-02 | PSP gửi cùng callback 10 lần | Normal operation | Một payment entry, 10 inbox receipts hoặc 1 receipt + duplicate count | Effective entries = 1 | TC-02 |
+| QA-02 | Đơn vị QR gửi cùng callback 10 lần | Normal operation | Một payment entry, 10 inbox receipts hoặc 1 receipt + duplicate count | Effective entries = 1 | TC-02 |
 | QA-03 | 20 requests reserve SKU còn 5 | Concurrent | 5 thành công, 15 out-of-stock | available ≥0, no duplicate reservation | TC-03 |
 | QA-04 | Carrier API lỗi 5xx 3 lần | Partner outage | Outbox retry, không mất request; sau đó success | 1 shipment external, retry count=3 | TC-04 |
-| QA-05 | Statement thiếu một COD payment | Reconciliation run | Mở discrepancy case | Case có owner, amount, source refs | TC-05 |
+| QA-05 | ĐVVC thu COD 500k nhưng chỉ chuyển 480k, đồng thời có hóa đơn phí 20k riêng | Reconciliation run | Không được net-off; mở case thiếu remittance 20k, hóa đơn xử lý ở luồng riêng | Case có owner, amount, source refs | TC-05 |
 | QA-06 | Warehouse scan cùng RTO hai lần | Return receiving | Lần hai trả duplicate/no-op | 1 RECEIVE/QC entry | TC-06 |
 | QA-07 | CSKH gọi endpoint adjustment | Authenticated but wrong role | Deny và audit | HTTP 403, no ledger change | TC-07 |
 | QA-08 | Restore backup gần nhất | Recovery drill | Ứng dụng đọc được order/ledger | RPO ≤24h, RTO mục tiêu ≤4h | TC-08 |
@@ -54,11 +54,11 @@ Mỗi dòng mô tả: ai/cái gì tạo ra tác động → hệ thống đang �
 
 | TC | Given | When | Then |
 |---|---|---|---|
-| TC-01 Happy QR | SKU available=10 | Tạo order 2 SKU, trả QR, callback valid, ship | Reservation commit; Payment PAID; Shipment HANDED_OVER; IDs truy vết cùng order |
+| TC-01 Happy QR | SKU available=10; hàng 280k + phí giao khách trả 20k | Tạo QR intent 300k, callback valid, ship | Payment PAID 300k, QR fee=0; shipment COD=0; reservation commit; IDs truy vết cùng order |
 | TC-02 Duplicate payment | Payment PENDING | Gửi cùng external_event_id 10 lần | 01 PAID entry; các lần sau 200/no-op; audit duplicate |
 | TC-03 Oversell | available=5 | 20 request song song mỗi request quantity=1 | Đúng 5 success; 15 conflict; balance invariant đúng |
 | TC-04 Outbox recovery | Carrier mock fail 3 lần | Worker retry | Lần 4 tạo đúng 01 shipment; không duplicate external order |
-| TC-05 COD discrepancy | Expected 500k, statement 480k, bank 480k | Run reconciliation | Case MISSING_20K/WRONG_FEE; batch PARTIAL; không tự điều chỉnh ledger |
+| TC-05 COD gross và hóa đơn riêng | Expected/collected 500k; bank remittance 480k; carrier invoice 20k riêng | Run reconciliation | Case MISSING_REMITTANCE_20K; không lấy invoice bù vào COD; invoice được verify/pay ở luồng riêng |
 | TC-06 RTO duplicate | Shipment RETURNED | Scan cùng tracking hai lần | Một RETURN_TO_QC; sau QC pass một RESTOCK |
 | TC-07 Authorization | User role CS | POST adjustment | 403; security audit có user/action |
 | TC-08 Backup restore | Có backup demo | Restore vào DB sạch | Counts/checksum Order, StockEntry, PaymentEntry khớp |
@@ -86,9 +86,9 @@ Mỗi hàng bắt đầu từ một yêu cầu. Các cột sau trả lời yêu 
 | REQ-COD-01 | G-03 | P4/P5 / Shipping+Return | BPMN-02 | ADR-02,03 | TC-06, TC-09 |
 | REQ-COD-02 | G-02 | P6 / Reconciliation | BPMN-03 | ADR-04 | TC-05 |
 | REQ-COD-03 | G-04 | P5 / Return+Inventory | BPMN-02 | ADR-02 | TC-06 |
-| EXT-01 | G-01,G-02 | P3 / Payment+PSP Adapter | BPMN-01; QR callback | ADR-03,04 | TC-01, TC-02, TC-10 |
+| EXT-01 | G-01,G-02 | P3 / Payment+QR Payment Adapter | BPMN-01; QR callback | ADR-03,04 | TC-01, TC-02, TC-10 |
 | EXT-02 | G-03,G-04 | P5 / Return+Payment | BPMN-02; refund API | ADR-02,04 | TC-06 |
-| EXT-03 | G-02 | P6 / Reconciliation | BPMN-03 | ADR-04 | settlement fixture |
+| EXT-03 | G-02 | P6 / Reconciliation | BPMN-03 | ADR-04 | QR reconciliation fixture |
 | NFR-01 | G-01 | Technology/application view | Order query API | ADR-01 | QA-01 |
 | NFR-02 | G-01 | Technology services | Health/backup | ADR-01 | TC-08 |
 | NFR-03/04 | G-04,G-05 | Inbox/ledger/outbox | Webhooks, retry worker | ADR-02,03 | TC-02, TC-03, TC-04, TC-06 |

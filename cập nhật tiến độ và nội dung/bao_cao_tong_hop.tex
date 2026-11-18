@@ -66,7 +66,7 @@ Ngày cập nhật: & 17/11/2026
 Trong phạm vi gồm: order capture; reservation; QR/COD; pick--pack--handover; tracking; retry/RTO; return/exchange; QC; refund; COD/QR reconciliation; discrepancy và reporting. Ngoài phạm vi gồm procurement, nhiều kho, marketplace, general ledger, tối ưu tuyến giao, production HA và tích hợp pháp lý hóa đơn điện tử.
 
 \section{Phương pháp và chuẩn tham chiếu}
-TOGAF Standard, 10th Edition tổ chức Architecture Vision, bốn miền kiến trúc, gap và roadmap. ArchiMate 3.2 mô hình hóa tổng quan và quan hệ xuyên lớp. BPMN 2.0.2 mô tả chi tiết collaboration. ISO/IEC 25010:2023 hỗ trợ phân loại thuộc tính chất lượng. OpenAPI mô tả HTTP API; OWASP API Security Top 10 hỗ trợ rà soát bảo mật. VietQRPay/NAPAS là căn cứ nghiệp vụ cho QR có mã tham chiếu và đối soát; prototype chỉ dùng PSP giả lập.
+TOGAF Standard, 10th Edition tổ chức Architecture Vision, bốn miền kiến trúc, gap và roadmap. ArchiMate 3.2 mô hình hóa tổng quan và quan hệ xuyên lớp. BPMN 2.0.2 mô tả chi tiết collaboration. ISO/IEC 25010:2023 hỗ trợ phân loại thuộc tính chất lượng. OpenAPI mô tả HTTP API; OWASP API Security Top 10 hỗ trợ rà soát bảo mật. VietQRPay/NAPAS là căn cứ cho QR có mã tham chiếu. Tài liệu dùng tác nhân tổng quát Ngân hàng/Đơn vị cung cấp thanh toán QR, có thể là ngân hàng, cổng thanh toán, PSP hoặc mock; không tuyên bố NAPAS trực tiếp callback cho shop.
 
 \chapter{Hướng dẫn đọc và thuật ngữ}
 
@@ -80,13 +80,15 @@ Order-to-Cash (O2C) có thể hiểu là ``từ lúc nhận đơn đến lúc nh
 \midrule\endhead
 Giữ chỗ tồn kho (reservation) & Tạm dành hàng cho một đơn để đơn khác không mua mất. Nếu khách không trả QR đúng hạn, hàng được giải phóng để bán lại.\\
 Sổ biến động (ledger) & Danh sách chỉ ghi thêm, lưu từng lần hàng hoặc tiền tăng/giảm. Nếu sai thì thêm bản ghi điều chỉnh thay vì xóa lịch sử.\\
-Webhook/callback & Đối tác chủ động gọi về hệ thống khi có sự kiện, ví dụ PSP báo đã nhận tiền hoặc carrier báo đã giao.\\
+Webhook/callback & Đối tác chủ động gọi về hệ thống khi có sự kiện, ví dụ Đơn vị QR báo đã nhận tiền hoặc carrier báo đã giao.\\
 Xử lý lặp an toàn (idempotency) & Cùng thông báo đến nhiều lần vẫn chỉ tạo một kết quả nghiệp vụ. Mười callback ``đã trả tiền'' vẫn chỉ ghi tiền một lần.\\
 Inbox/Outbox & Inbox lưu thông điệp nhận vào để chống trùng; Outbox lưu việc cần gửi ra để có thể thử lại khi mạng lỗi.\\
 RTO/chuyển hoàn & Hàng quay về vì chưa giao thành công. Khác với return là khách đã nhận rồi mới yêu cầu trả.\\
 RMA/phiếu đổi trả & Hồ sơ có mã riêng, ghi đơn gốc, lý do, sản phẩm và trạng thái xử lý đổi/trả.\\
 QC/kiểm tra chất lượng & Kiểm tra hàng quay về có thể nhập lại để bán hay phải đưa vào khu cách ly.\\
-Đối soát ba chiều & So sánh sổ tiền nội bộ, bảng kê đối tác và số tiền thực tế vào ngân hàng.\\
+Đối soát ba chiều & COD: số phải thu--ĐVVC báo đã thu--tiền gross chuyển về; QR: Payment Ledger--bảng kê Đơn vị QR--ngân hàng.\\
+Phí giao thu khách & Khoản hiển thị ở checkout và cộng vào tổng đơn; là doanh thu/thu hồi chi phí của shop.\\
+Hóa đơn phí ĐVVC & Chi phí dịch vụ shop kiểm theo vận đơn/biểu phí và thanh toán riêng theo tháng; không khấu trừ COD.\\
 Chênh lệch (discrepancy) & Trường hợp số tiền, mã giao dịch hoặc phí không khớp; hệ thống phải mở hồ sơ xử lý thay vì âm thầm sửa.\\
 Mã liên kết (correlation ID) & Mã chung giúp tìm mọi log và thao tác thuộc cùng một đơn hoặc một luồng xử lý.\\
 Phân quyền theo vai trò (RBAC) & Mỗi vai trò chỉ làm đúng phần việc; ví dụ nhân viên kho không được điều chỉnh tiền.\\
@@ -107,8 +109,8 @@ Phần này là ``đề bài chính thức'' của công việc thiết kế: ai
 Sponsor & Chủ doanh nghiệp SME.\\
 Vấn đề & Dữ liệu đơn--tồn--giao--tiền phân tán; COD thủ công; QR chưa gắn chắc với đơn; RTO/đổi trả làm lệch tồn và tiền.\\
 Mục tiêu & Kiến trúc đích và lộ trình O2C xuyên suốt, kiểm soát ngoại lệ và truy vết tài chính.\\
-Tổ chức & Sales/CSKH, kho, kế toán, IT; khách hàng, carrier và PSP/ngân hàng là external actor.\\
-Ràng buộc & Một website, một kho trung tâm, một carrier, 100--300 đơn/ngày và một PSP giả lập; ngân sách và đội ngũ SME.\\
+Tổ chức & Sales/CSKH, kho, kế toán, IT; khách hàng, carrier và Ngân hàng/Đơn vị cung cấp thanh toán QR là external actor.\\
+Ràng buộc & Một website, một kho trung tâm, một carrier, 100--300 đơn/ngày và một Đơn vị QR giả lập; ngân sách và đội ngũ SME.\\
 Đầu ra & TOGAF, sáu ArchiMate viewpoint, ba BPMN, bốn ADR, risk/traceability, prototype và 12 slide bảo vệ.\\
 \bottomrule
 \end{longtable}
@@ -130,7 +132,7 @@ Khách hàng & Đơn đúng, trả tiền an toàn, đổi trả rõ & BPMN-01/0
 Kho & Reservation, xuất/nhập/QC không trùng & Inventory ledger, BPMN-01/02\\
 Kế toán & COD/QR, phí, refund, discrepancy & BPMN-03, reconciliation view\\
 IT & Bảo mật, phục hồi, vận hành đơn giản & Technology view, ADR, risk\\
-Carrier/PSP & Contract, callback, reference & Adapters và message flows\\
+Carrier/Đơn vị QR & Contract, callback, reference, bảng kê/hóa đơn & Adapters và message flows\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -146,7 +148,7 @@ G-02 Cải thiện đối soát COD & Mọi khoản COD dự kiến được so 
 G-03 Quản lý hàng hoàn nhất quán & Mọi giao thất bại/RTO có lần giao, phiếu nhận hoàn và kết quả QC.\\
 G-04 Tồn kho chính xác & Không oversell; chỉ tăng hàng bán được sau khi nhận thực tế và QC đạt.\\
 G-05 Truy vết & Thay đổi quan trọng có reference, time, source, actor/correlation ID.\\
-G-06 Dễ mở rộng & Thêm carrier/PSP qua adapter mà không sửa logic lõi.\\
+G-06 Dễ mở rộng & Thêm carrier/Đơn vị QR qua adapter mà không sửa logic lõi.\\
 \bottomrule
 \end{longtable}
 
@@ -159,6 +161,11 @@ G-06 Dễ mở rộng & Thêm carrier/PSP qua adapter mà không sửa logic lõ
 \item Đơn giản phù hợp SME: modular monolith và PostgreSQL; chỉ tách khi có số đo.
 \end{enumerate}
 
+\section{Chính sách tiền hàng và phí vận chuyển}
+Tổng khách phải trả bằng tiền hàng sau giảm giá cộng phí vận chuyển hiển thị tại checkout. Shop cấu hình phí thu khách ít nhất bằng chi phí vận chuyển ước tính và có thể cộng mức đệm nhỏ; đây là chính sách giá của shop. Với COD, carrier thu đúng grand total; cuối tháng shop đối chiếu expected với bảng kê collected, xử lý mismatch rồi carrier chuyển đủ COD gross. Bank credit là nguồn thứ ba để đóng kỳ. Với QR, Ngân hàng/Đơn vị cung cấp thanh toán QR tạo intent đúng grand total; vận đơn có COD amount bằng 0. Bài tập giả định QR fee bằng 0.
+
+Carrier không khấu trừ phí dịch vụ vào COD. Cuối tháng carrier xuất hóa đơn phí riêng; shop so hóa đơn với shipment/tracking và biểu phí rồi thanh toán bằng một dòng tiền ra riêng. Vì vậy Customer Shipping Charge, COD Remittance và Carrier Invoice là ba khái niệm khác nhau.
+
 \section{Yêu cầu chức năng}
 \begin{longtable}{p{0.12\textwidth}p{0.35\textwidth}p{0.43\textwidth}}
 \toprule
@@ -166,12 +173,12 @@ G-06 Dễ mở rộng & Thêm carrier/PSP qua adapter mà không sửa logic lõ
 \midrule\endhead
 FR-01 & Tạo/theo dõi đơn & Đơn có dòng hàng, tổng tiền, địa chỉ và lịch sử trạng thái.\\
 FR-02 & Kiểm tra/giữ tồn & Atomic reservation khi xác nhận; số có thể bán không âm.\\
-FR-03 & Chọn COD hoặc QR & Mỗi đơn có phương thức và số tiền dự kiến tương ứng.\\
+FR-03 & Chọn COD hoặc QR & COD amount hoặc QR intent bằng grand total gồm phí giao khách trả; vận đơn QR có COD bằng 0.\\
 FR-04 & Tạo/theo dõi giao & Shipment/tracking và trạng thái chuẩn hóa từ carrier.\\
 FR-05 & Kết quả giao & Mỗi lần giao có thành công/thất bại, thời gian, lý do, reference.\\
 FR-06 & Giao lại/chuyển hoàn & Retry theo policy; hết lượt chuyển RTO.\\
 FR-07 & Nhận/QC hàng hoàn & Chỉ restock sau nhận thực tế và QC đạt; scan lặp là no-op.\\
-FR-08 & Đối soát COD & So expected, carrier reported collected và tiền thực nhận.\\
+FR-08 & Đối soát COD & Theo tháng so expected gross, carrier reported collected và gross remittance; không trừ carrier invoice.\\
 FR-09 & Chênh lệch COD & Case có amount, cause, owner, evidence và status.\\
 FR-10 & Lịch sử trạng thái & Order/stock/payment change có source, time, actor, correlation.\\
 FR-11 & Báo cáo & Giao thất bại, hàng hoàn và COD phải thu.\\
@@ -179,7 +186,7 @@ FR-12 & RBAC & Customer, CSKH, kho, kế toán, owner chỉ dùng đúng quyền
 \bottomrule
 \end{longtable}
 
-Yêu cầu riêng II-B: REQ-COD-01 là luồng giao thất bại/RTO; REQ-COD-02 là đối soát COD ba chiều và gắn cờ thiếu chứng từ/chênh lệch; REQ-COD-03 là chỉ tăng tồn sau nhận thực tế và QC, chống ghi trùng. Phần mở rộng gồm EXT-01 QR theo đơn, EXT-02 đổi/trả và hoàn tiền sau giao, EXT-03 đối soát QR.
+Yêu cầu riêng II-B: REQ-COD-01 là luồng giao thất bại/RTO; REQ-COD-02 là đối soát COD gross ba chiều và gắn cờ thiếu chứng từ/chênh lệch; REQ-COD-03 là chỉ tăng tồn sau nhận thực tế và QC, chống ghi trùng. EXT-01 là QR intent đúng grand total, callback xác thực và QR fee bằng 0; EXT-02 là đổi/trả/hoàn tiền; EXT-03 là đối soát QR với Đơn vị QR và ngân hàng.
 
 \section{Yêu cầu phi chức năng}
 Yêu cầu chức năng nói hệ thống phải làm được việc gì; yêu cầu phi chức năng nói hệ thống phải hoạt động tốt đến mức nào. Ví dụ, tra cứu đơn là chức năng, còn ``95\% lần tra cứu dưới 2 giây'' là chất lượng có thể đo.
@@ -194,7 +201,7 @@ NFR-04 & Khả năng phục hồi & Retry có giãn cách, đồng bộ lại, m
 NFR-05 & Bảo mật & Xác thực, RBAC, callback verification, TLS, secret ngoài code.\\
 NFR-06 & Truy vết & Actor/source/time/correlation/reference cho thay đổi quan trọng.\\
 NFR-07 & Bảo trì & Tách logic đơn, tồn, vận chuyển, đối soát; không ghi bảng chéo module.\\
-NFR-08 & Toàn vẹn tài chính & Mọi chênh lệch COD có case/status; số đã nhận, phí và lệch giải thích expected.\\
+NFR-08 & Toàn vẹn tài chính & Tiền khách trả, COD gross remittance và carrier invoice tách biệt; mọi chênh lệch có case/status.\\
 \bottomrule
 \end{longtable}
 
@@ -206,8 +213,9 @@ Bảng được đọc từ trái sang phải: doanh nghiệp đang làm thế n
 \midrule\endhead
 Order & Web xuất file & OMS lifecycle/correlation & WP-01, WP-02\\
 Inventory & Bảng tính/trừ lùi & Reservation + ledger + QC & WP-01--03\\
-COD & Dò statement cuối kỳ & Ledger + 3-way match + aging & WP-04\\
-QR & Transfer khó gắn đơn & Intent/reference/callback/refund & WP-02, WP-04\\
+COD & Dò statement cuối kỳ & Gross ledger + 3-way match theo tháng & WP-04\\
+QR & Transfer khó gắn đơn & Intent/reference/callback/refund qua Đơn vị QR & WP-02, WP-04\\
+Phí carrier & Có thể trộn với COD & Invoice riêng, verify/pay riêng, không net-off & WP-04, WP-05\\
 Shipping & Theo dõi tay & API, signed webhook, RTO & WP-03\\
 Return & Chat rời rạc & RMA, QC, disposition & WP-03\\
 Technology & File/máy cá nhân & Monolith, PostgreSQL, audit/backup & WP-01, WP-05\\
@@ -224,9 +232,9 @@ ArchiMate dùng để vẽ bức tranh tổng thể qua ba tầng: tầng nghi�
 Assignment gán active structure cho behavior; Realization nối process/function tới service và data object tới business object; Serving mô tả dịch vụ lớp dưới phục vụ lớp trên; Access mô tả đọc/ghi; Triggering mô tả trước--sau nhân quả; Flow chỉ dùng khi truyền dữ liệu, tiền hoặc hàng và phải có nhãn.
 
 \section{Motivation và Strategy viewpoints}
-Stakeholder gồm Owner, Customer, Accountant, Warehouse, CSKH và IT. Driver gồm tăng đơn online, giao thất bại/RTO, khó đối soát COD/QR, lệch tồn và kỳ vọng đổi trả. Assessment gồm dữ liệu phân tán, không correlation ID, trạng thái trộn và thiếu audit. Outcome hiện thực G-01--G-06; AP-01--05 và constraint ảnh hưởng requirements. Meaning quan trọng là ``đã giao không đồng nghĩa đã nhận tiền'' và ``hàng đã về không đồng nghĩa có thể bán''; Value là giảm tiền treo, tránh nhập tồn sai và ngoại lệ có owner.
+Stakeholder gồm Owner, Customer, Accountant, Warehouse, CSKH và IT. Driver gồm tăng đơn online, giao thất bại/RTO, khó đối soát COD/QR, lệch tồn và kỳ vọng đổi trả. Assessment gồm dữ liệu phân tán, không correlation ID, trạng thái trộn và thiếu audit. Outcome hiện thực G-01--G-06; AP-01--05 và constraint ảnh hưởng requirements. Meaning quan trọng là ``đã giao không đồng nghĩa đã nhận tiền'', ``hàng đã về không đồng nghĩa có thể bán'' và ``phí khách trả không đồng nghĩa hóa đơn carrier của shop''.
 
-Strategy gồm Resource là nhân sự, dữ liệu, hợp đồng đối tác và nền tảng; Capability là điều phối đơn, kiểm soát tồn, quản lý giao/hoàn, đối soát COD và truy vết; Value Stream là tiếp nhận $\rightarrow$ giữ hàng/xác nhận tiền $\rightarrow$ giao $\rightarrow$ xử lý hoàn $\rightarrow$ đối soát; Course of Action là chuẩn hóa dữ liệu, O2C tích hợp gọn, tích hợp phục hồi và ledger/case.
+Strategy gồm Resource là nhân sự, dữ liệu, hợp đồng ĐVVC/Đơn vị QR và nền tảng; Capability là điều phối đơn, kiểm soát tồn, quản lý giao/hoàn, đối soát COD và truy vết; Value Stream là tiếp nhận $\rightarrow$ giữ hàng/xác nhận tiền $\rightarrow$ giao $\rightarrow$ xử lý hoàn $\rightarrow$ đối soát; Course of Action là chuẩn hóa dữ liệu, O2C tích hợp gọn, tích hợp phục hồi và ledger/case.
 
 \section{Business viewpoint}
 \begin{longtable}{p{0.28\textwidth}p{0.25\textwidth}p{0.36\textwidth}}
@@ -238,7 +246,7 @@ P2 Reserve/Fulfill & Fulfillment & Reservation, Stock Record\\
 P3 Collect/Confirm Payment & Payment & Payment, QR Reference, COD Receivable\\
 P4 Deliver/Handle Failure & Delivery Tracking & Shipment, Delivery Attempt\\
 P5 Return/Exchange/QC & Return/Exchange & RMA, Returned Item, QC Result\\
-P6 Reconcile/Close & Reconciliation & Statement, Settlement, Discrepancy Case\\
+P6 Reconcile/Close & Reconciliation & COD/QR Statement, COD Remittance, Carrier Invoice, Case\\
 \bottomrule
 \end{longtable}
 
@@ -254,19 +262,19 @@ Payment & Intent/Payment Ledger & Payment\\
 Shipping & Shipment Lifecycle & Shipping\\
 Return & RMA/Disposition & Return\\
 Reconciliation & Matching/Case/Analytics & Reconciliation, Reporting\\
-Carrier/PSP Adapter & External Translation & Integration Services\\
+Carrier/QR Payment Adapter & External Translation & Integration Services\\
 \bottomrule
 \end{longtable}
 
-State ownership được tách: Order không chứa shipment state; Reservation có ACTIVE/COMMITTED/RELEASED/EXPIRED; Payment có PENDING/PAID/FAILED/EXPIRED/REFUNDED; Shipment có CREATED/HANDED\_OVER/IN\_TRANSIT/DELIVERED/FAILED/RETURNING/RETURNED; RMA có REQUESTED đến CLOSED. StockEntry và PaymentEntry là append-only.
+State ownership được tách: Order lưu item subtotal, customer shipping charge và grand total nhưng không chứa shipment state; Reservation có ACTIVE/COMMITTED/RELEASED/EXPIRED; Payment có PENDING/PAID/FAILED/EXPIRED/REFUNDED; Shipment có CREATED/HANDED\_OVER/IN\_TRANSIT/DELIVERED/FAILED/RETURNING/RETURNED; RMA có REQUESTED đến CLOSED. StockEntry và PaymentEntry là append-only. CarrierInvoice có RECEIVED/VERIFIED/DISPUTED/APPROVED/PAID và không nằm trong Payment Ledger.
 
-Application Interface gồm Orders/Operations API, Carrier Adapter API/webhook, PSP Adapter API/webhook, Statement Import và contract nội bộ. Application Collaboration Order Fulfillment ghép Order--Inventory--Shipping; Financial Closing ghép Payment--Reconciliation. Các Application Event như OrderConfirmed, ShipmentFailed/Returned và StatementImported kích hoạt function kế tiếp.
+Application Interface gồm Orders/Operations API, Carrier Adapter API/webhook, QR Payment Adapter API/webhook, Statement/Invoice Import và contract nội bộ. Application Collaboration Order Fulfillment ghép Order--Inventory--Shipping; Financial Closing ghép Payment--Reconciliation. Các Application Event như OrderConfirmed, ShipmentFailed/Returned, MonthlyCODStatementImported, CODRemittanceReceived và CarrierInvoiceImported kích hoạt function kế tiếp.
 
 \section{Data architecture}
-Mức khái niệm mô tả Customer--Order--Stock--Payment--Shipment--Return--ReconciliationCase. Mức logic chỉ ra thực thể, quan hệ, \code{order\_id} xuyên suốt và unique key cho external event/tracking/RMA. Mức vật lý dùng PostgreSQL schema theo module, transaction/constraint, ledger append-only, object storage chứng từ, index, backup và retention. Vòng đời dữ liệu là tạo, sử dụng/chia sẻ, đối soát, lưu giữ và ẩn/xóa theo chính sách; nghiệp vụ sở hữu định nghĩa/chất lượng còn IT chịu quyền truy cập và backup.
+Mức khái niệm mô tả Customer--Order--CustomerShippingCharge--Stock--Payment--Shipment--Return--CODRemittance--CarrierInvoice--ReconciliationCase. Mức logic chỉ ra thực thể, quan hệ, \code{order\_id} xuyên suốt và unique key cho external event/tracking/RMA/invoice. Mức vật lý dùng PostgreSQL schema theo module, transaction/constraint, ledger append-only, object storage chứng từ, index, backup và retention. Vòng đời dữ liệu là tạo, sử dụng/chia sẻ, đối soát, lưu giữ và ẩn/xóa theo chính sách.
 
 \section{Technology và Migration viewpoints}
-Cloud VM được mô hình là Node; compute là Device; Linux, reverse proxy, Python runtime, PostgreSQL DBMS và scheduler/worker là System Software; package, schema, statement, backup và log là Artifact. Internet/VPC là Communication Network; HTTPS, DB và backup connection là Path; public HTTPS/private DB endpoint là Technology Interface. TLS ingress, relational storage, scheduled execution, backup/restore và logging/monitoring là Technology Service. Carrier API và PSP API là External Node qua HTTPS.
+Cloud VM được mô hình là Node; compute là Device; Linux, reverse proxy, Python runtime, PostgreSQL DBMS và scheduler/worker là System Software; package, schema, statement, invoice, backup và log là Artifact. Internet/VPC là Communication Network; HTTPS, DB và backup connection là Path; public HTTPS/private DB endpoint là Technology Interface. TLS ingress, relational storage, scheduled execution, backup/restore và logging/monitoring là Technology Service. Carrier API và QR Payment Provider API là External Node qua HTTPS.
 
 Baseline, ba giai đoạn và Target được hiện thực bởi WP-01--05. Work Package hiện thực Deliverable; Deliverable hiện thực Plateau; Gap liên kết Work Package; Implementation Event M1--M5 đánh dấu chuẩn hóa, chạy thử đơn--tồn, E2E giao--hoàn, đạt đối soát và nghiệm thu pilot.
 
@@ -275,15 +283,15 @@ Baseline, ba giai đoạn và Target được hiện thực bởi WP-01--05. Wor
 BPMN là lưu đồ quy trình có quy tắc. Pool là một tổ chức độc lập; lane là vai trò bên trong tổ chức; task là việc cần làm; event là điều đã xảy ra; gateway là điểm rẽ nhánh; message flow là thông điệp giữa các tổ chức.
 
 \section{BPMN-01: Order--Payment--Fulfillment}
-Trigger là customer submit order. SME validate và atomic reserve. Nếu hết tồn, hủy và báo khách. Với COD, hệ thống tạo expected receivable; với QR, tạo payment intent/reference và chờ signed callback. Timer hết hạn làm expire và release reservation. Sau xác nhận, kho pick/pack, commit stock, outbox tạo shipment; carrier trả tracking. Thành công kết thúc ở Shipment HAND\-ED\_OVER và Order FULFILLING.
+Trigger là customer submit order. SME tính grand total bằng tiền hàng sau giảm giá cộng phí giao khách trả rồi atomic reserve. Với COD, expected receivable và shipment COD amount đều bằng grand total. Với QR, Ngân hàng/Đơn vị cung cấp thanh toán QR tạo intent đúng grand total, QR fee bằng 0; sau callback hợp lệ hệ thống tạo shipment có COD amount bằng 0. Timer hết hạn làm expire và release reservation.
 
-Ký pháp bắt buộc: XOR cho tồn/phương thức; intermediate message catch cho payment; interrupting timer boundary cho QR timeout; message flow giữa Customer--SME--PSP--Carrier; không dùng sequence flow xuyên pool.
+Ký pháp bắt buộc: XOR cho tồn/phương thức; intermediate message catch cho payment; interrupting timer boundary cho QR timeout; message flow giữa Customer--SME--Đơn vị QR--Carrier; không dùng sequence flow xuyên pool.
 
 \section{BPMN-02: Delivery Failure, RTO và Return/Exchange}
 Hai trigger được tách: carrier gửi delivery failure trước khi delivered; hoặc customer tạo return/exchange sau delivered. Nếu còn lượt giao và khách đồng ý, đặt lịch retry; nếu không, shipment RETURNING. Return request phải qua eligibility rồi tạo RMA. Khi kiện về, kho scan tracking/RMA, nhận vào QC; pass thì RESTOCK, fail thì QUARANTINE. QR/RTO hoặc return tạo refund; COD đã thu tạo payout obligation; exchange reserve SKU thay thế; COD chưa thu đóng expected là uncollected.
 
 \section{BPMN-03: Reconciliation}
-Carrier/PSP/bank gửi statement/settlement. SME hash file, kiểm schema và batch trùng, normalize reference/fee/amount, rồi match ba chiều. Exact match tạo settlement/fee entries. Missing, partial, duplicate hoặc unknown tạo ReconciliationCase. Kế toán điều tra bằng chứng và nhận adjustment settlement hoặc post approved adjustment. Batch là MATCHED, PARTIAL hoặc DISCREPANT; case mở đi vào aging/SLA.
+Cuối tháng carrier gửi COD statement; shop so sơ bộ expected--collected và xử lý mismatch, sau đó carrier remittance đủ gross. Bank credit hoàn thành đối soát ba chiều và đóng kỳ. CarrierInvoice được kiểm riêng theo shipment/tracking và biểu phí rồi shop thanh toán riêng, không net-off COD. QR được match Payment Ledger--bảng kê Đơn vị QR--ngân hàng với fee bằng 0. Mismatch tạo ReconciliationCase.
 
 \chapter{Architecture Decision Records}
 
@@ -300,8 +308,8 @@ Chọn PostgreSQL transaction/compare-and-update, unique order--SKU reservation 
 \section{ADR-03: Inbox/Outbox và idempotency}
 Domain change và OutboxEvent commit cùng transaction. Worker retry exponential. Callback ghi InboxEvent unique theo provider/external event ID sau xác thực signature/token/timestamp. Sự kiện lỗi quá ngưỡng vào manual queue. Đổi lại, hệ thống chấp nhận eventual consistency.
 
-\section{ADR-04: Ledger và three-way reconciliation}
-Payment Ledger chứa EXPECTED, COLLECTED/PAID, SETTLED, FEE, REFUND và ADJUSTMENT. Reconciliation so expected ledger, provider statement và bank settlement. Mismatch trở thành case; adjustment bắt buộc actor, reason, evidence và approval.
+\section{ADR-04: COD gross và carrier invoice tách riêng}
+Chọn Payment Ledger chứa EXPECTED, COLLECTED/PAID, REMITTED, REFUND và ADJUSTMENT. COD đối soát gross theo tháng; CarrierInvoice không nằm trong ledger này mà được kiểm và shop thanh toán riêng. QR intent bằng grand total, QR fee bằng 0 và shipment COD bằng 0. Invariant là COD expected = collected = remitted + discrepancy; carrier invoice không được dùng bù vào phương trình này.
 
 \chapter{Kiểm chứng}
 
@@ -317,7 +325,7 @@ R-02 & Callback lặp & Inbox key, idempotent handler, ledger invariant.\\
 R-03 & Callback giả mạo & TLS, signature/token, timestamp, rate limit.\\
 R-04 & Callback mất/sai thứ tự & Outbox/inbox, state guard, polling/manual queue.\\
 R-05 & RTO nhập hai lần/chưa QC đã bán & Unique scan, QC state, append-only entry.\\
-R-06 & Settlement sai/thiếu/trùng & Three-way match, hash, case, approval.\\
+R-06 & Thiếu COD/net-off nhầm phí/invoice sai & Gross three-way match; invoice riêng; case/approval.\\
 R-07 & Lộ PII/vượt quyền & RBAC, BOLA/BFLA tests, mask log.\\
 R-08 & Mất DB/VM & Backup, restore drill, health check.\\
 \bottomrule
@@ -329,11 +337,11 @@ Các test dùng cấu trúc Cho trước--Khi--Thì. Ví dụ: cho trước còn
 \toprule
 \textbf{TC} & \textbf{Stimulus} & \textbf{Expected}\\
 \midrule\endhead
-TC-01 & QR happy path & Paid, stock committed, shipment handover, correlation xuyên suốt.\\
+TC-01 & QR 280k hàng + 20k phí giao & Intent/PAID 300k, fee=0, shipment COD=0.\\
 TC-02 & Callback giống nhau 10 lần & Một effective payment entry; duplicate no-op.\\
 TC-03 & 20 reserve cho available=5 & 5 success, 15 conflict, balance không âm.\\
 TC-04 & Carrier 5xx ba lần & Lần bốn đúng một shipment, retry log đầy đủ.\\
-TC-05 & COD expected 500k, bank/statement 480k & Discrepancy 20k, không tự sửa ledger.\\
+TC-05 & COD 500k, remittance 480k, invoice riêng 20k & Case thiếu 20k; không net-off invoice; invoice pay riêng.\\
 TC-06 & Scan một RTO hai lần & Một receive, một QC/restock.\\
 TC-07 & CS gọi adjustment & HTTP 403, không đổi ledger, có audit.\\
 TC-08 & Restore backup & Count/checksum order và ledger khớp.\\
@@ -360,9 +368,9 @@ NFR-08 & P6 & Ledger/case & 04 & 05,08\\
 \chapter{Prototype}
 
 \section{Phạm vi và kiến trúc}
-Prototype dùng FastAPI modular monolith, SQLite cho demo và PostgreSQL là target, UI tối giản, mock PSP/carrier và DB-backed outbox worker. Hai lát cắt là QR happy path và COD failure--RTO--QC--reconciliation. Non-goal gồm production UI, tích hợp thật, HA và general ledger.
+Prototype dùng FastAPI modular monolith, SQLite cho demo và PostgreSQL là target, UI tối giản, mock Ngân hàng/Đơn vị QR, mock carrier và DB-backed outbox worker. Hai lát cắt là QR happy path và COD failure--RTO--QC--reconciliation. Non-goal gồm production UI, tích hợp thật, HA và general ledger.
 
-Prototype là bản thử để chứng minh thiết kế, không phải sản phẩm bán hàng thật. Mock là dịch vụ giả lập thay PSP/carrier; seed data là dữ liệu mẫu; module là phân hệ; endpoint là một địa chỉ API cụ thể.
+Prototype là bản thử để chứng minh thiết kế, không phải sản phẩm bán hàng thật. Mock là dịch vụ giả lập thay Đơn vị QR/carrier; seed data là dữ liệu mẫu; module là phân hệ; endpoint là một địa chỉ API cụ thể.
 
 \section{API chính}
 \begin{longtable}{p{0.36\textwidth}p{0.19\textwidth}p{0.34\textwidth}}
@@ -372,7 +380,7 @@ Prototype là bản thử để chứng minh thiết kế, không phải sản p
 \code{POST /api/orders} & Customer/CS & Tạo order và reserve.\\
 \code{GET /api/orders/\{id\}} & Customer/CS & Order detail/timeline.\\
 \code{POST /orders/\{id\}/payments/qr-intents} & Customer & QR intent/reference.\\
-\code{POST /api/webhooks/psp} & PSP & Signed/idempotent payment callback.\\
+\code{POST /api/webhooks/qr-provider} & Đơn vị QR & Signed/idempotent payment callback.\\
 \code{POST /orders/\{id\}/fulfill} & Warehouse & Pick/pack và shipment outbox.\\
 \code{POST /api/webhooks/carrier} & Carrier & Shipment canonical event.\\
 \code{POST /api/returns} & Customer/CS & RMA.\\
@@ -380,6 +388,7 @@ Prototype là bản thử để chứng minh thiết kế, không phải sản p
 \code{POST /returns/\{id\}/qc} & Warehouse & QC/disposition.\\
 \code{POST /payments/\{id\}/refunds} & Accountant & Refund.\\
 \code{POST /reconciliation/batches} & Accountant & Import statement.\\
+\code{POST /carrier-invoices} & Accountant & Import/verify carrier invoice riêng.\\
 \code{POST /reconciliation/cases/\{id\}/resolve} & Accountant & Resolve/adjust.\\
 \bottomrule
 \end{longtable}
@@ -387,9 +396,9 @@ Prototype là bản thử để chứng minh thiết kế, không phải sản p
 HTTP contract: 400 input; 401 auth/signature; 403 role; 404 not visible/not found; 409 state/idempotency/stock conflict; 422 business mapping; 429 rate limit; 503 dependency. Error body luôn có machine-readable code và correlation ID, không có stack trace/PII.
 
 \section{UI và demo}
-UI gồm Dashboard, Order Detail với bốn badge Order/Payment/Shipment/Return, Inventory ledger, Return/QC, Reconciliation Workbench và Integration Monitor.
+UI gồm Dashboard, Order Detail với bốn badge Order/Payment/Shipment/Return, Inventory ledger, Return/QC, Reconciliation Workbench có tab COD gross/QR/carrier invoice và Integration Monitor.
 
-Demo QR: seed 10; order 2; reservation active và available 8; payment callback gửi hai lần nhưng một entry; fulfill và tracking; PSP/bank settlement match. Demo COD: expected 300k; hai delivery failures rồi RETURNING; duplicate event no-op; QC pass và một restock; statement có wrong return fee 20k tạo case; accountant resolve bằng approved adjustment.
+Demo QR: item 280k + customer shipping charge 20k; intent/PAID 300k, fee=0; callback lặp chỉ một entry; shipment COD=0; bảng kê Đơn vị QR và bank 300k khớp. Demo COD: order A expected/collected 300k nhưng remittance mới 280k trong khi carrier invoice 20k là hồ sơ riêng, nên vẫn mở case thiếu 20k; order B giao thất bại/RTO, duplicate no-op, QC pass và một restock. Khi carrier chuyển bù và invoice được kiểm/pay riêng, các hồ sơ mới đóng.
 
 \chapter{Đối chiếu bài giảng và đề BTL}
 

@@ -10,14 +10,17 @@ Tài liệu này giải thích các thuật ngữ bằng ví dụ một cửa h�
 | COD | Khách trả tiền khi nhận hàng; người giao hàng thu hộ cửa hàng | Đơn 300.000 đồng, shipper thu 300.000 đồng khi giao |
 | QR payment | Khách quét mã để chuyển tiền cho đơn hàng | Mã QR chứa đúng số tiền và mã tham chiếu của đơn |
 | Đơn vị vận chuyển (carrier) | Công ty nhận kiện hàng từ shop và giao cho khách | GHN, GHTK hoặc đơn vị giả lập trong prototype |
-| PSP/đơn vị thanh toán | Bên trung gian xử lý và thông báo giao dịch QR | Trong prototype là một dịch vụ giả lập gửi thông báo thanh toán |
-| Payment intent | Bản ghi cho biết hệ thống đang chờ một khoản thanh toán cụ thể | Chờ 300.000 đồng cho đơn `ord_001` trong 15 phút |
+| Ngân hàng/Đơn vị cung cấp thanh toán QR | Tên tổng quát cho ngân hàng có API, cổng thanh toán, PSP hoặc dịch vụ mock; bên này tạo/quản lý QR và thông báo kết quả | Mock tạo QR 300.000 đồng rồi callback `PAID` cho shop |
+| PSP | Viết tắt của Payment Service Provider; chỉ là một loại Đơn vị cung cấp thanh toán QR | Tài liệu dùng tên tổng quát thay vì giả định một PSP cụ thể |
+| Payment intent | Bản ghi cho biết Đơn vị QR đang quản lý một khoản khách cần thanh toán cho một đơn | Chờ 300.000 đồng gồm tiền hàng và phí giao khách trả cho đơn `ord_001` |
 | Mã tham chiếu (reference) | Mã dùng để biết một khoản tiền thuộc đơn nào | Nội dung chuyển khoản chứa `ord_001` |
-| Settlement/quyết toán tiền | Tiền đã được bên giữ tiền chuyển thực tế về tài khoản shop | Đơn vị vận chuyển chuyển tổng COD của tuần cho shop |
-| Fee/phí | Khoản bị trừ như phí giao hàng, phí thu hộ hoặc phí hoàn | Thu COD 300.000 đồng nhưng shop nhận 270.000 đồng sau phí |
+| COD remittance/chuyển tiền COD | Toàn bộ tiền COD ĐVVC đã thu được chuyển về tài khoản shop sau đối soát tháng | ĐVVC thu 300.000 đồng và chuyển đủ 300.000 đồng; không trừ phí vận chuyển |
+| Customer Shipping Charge/phí giao thu khách | Khoản shop hiển thị ở checkout và cộng vào tổng tiền khách phải trả | Tiền hàng 280.000 + phí giao khách trả 20.000 = tổng đơn 300.000 |
+| Carrier Shipping Expense/chi phí vận chuyển | Chi phí dịch vụ shop phải trả ĐVVC, khác với phí shop thu khách | ĐVVC xuất hóa đơn tháng 20.000 đồng và shop thanh toán riêng |
+| Carrier Invoice/hóa đơn ĐVVC | Hóa đơn phí vận chuyển theo kỳ, được kiểm theo vận đơn và biểu phí | Hóa đơn tháng được duyệt rồi shop chuyển khoản riêng, không bù trừ COD |
 | Refund/hoàn tiền | Trả lại tiền cho khách; được ghi như một giao dịch mới | Hoàn 300.000 đồng cho đơn QR bị trả hàng |
 | Đối soát (reconciliation) | So sánh các nguồn dữ liệu để kiểm tra tiền có khớp hay không | So số phải thu, bảng kê đối tác và tiền vào ngân hàng |
-| Đối soát ba chiều | So sánh ba nguồn thay vì chỉ hai nguồn | Sổ tiền nội bộ ↔ bảng kê vận chuyển/PSP ↔ sao kê ngân hàng |
+| Đối soát ba chiều | So sánh ba nguồn thay vì chỉ hai nguồn | COD theo đơn ↔ ĐVVC báo đã thu ↔ tiền gross vào ngân hàng; hoặc QR ledger ↔ bảng kê Đơn vị QR ↔ ngân hàng |
 | Chênh lệch (discrepancy) | Số tiền hoặc thông tin không khớp | Hệ thống dự kiến 300.000 đồng nhưng chỉ nhận 280.000 đồng |
 | Công nợ COD | Tiền đơn vị vận chuyển đã thu hộ nhưng chưa chuyển cho shop | 5 đơn giao thành công nhưng COD chưa được chuyển |
 | Aging/tuổi công nợ | Số ngày một khoản tiền vẫn chưa được giải quyết | COD đã chậm chuyển 7 ngày |
@@ -52,7 +55,7 @@ Tài liệu này giải thích các thuật ngữ bằng ví dụ một cửa h�
 | Anti-corruption layer/lớp chống phụ thuộc | Adapter ngăn mô hình riêng của đối tác làm rối mô hình nội bộ | Đổi carrier không buộc sửa toàn bộ Order module |
 | Idempotency/xử lý lặp an toàn | Gửi cùng yêu cầu nhiều lần vẫn chỉ tạo một kết quả nghiệp vụ | Webhook “đã trả tiền” đến 10 lần nhưng chỉ ghi tiền một lần |
 | Idempotency key/khóa chống trùng | Mã duy nhất dùng để nhận biết yêu cầu đã xử lý | `external_event_id=pay_123` chỉ được ghi một lần |
-| Inbox | Bảng lưu các sự kiện nhận từ bên ngoài trước khi xử lý | Lưu callback PSP để chống trùng và kiểm tra lại |
+| Inbox | Bảng lưu các sự kiện nhận từ bên ngoài trước khi xử lý | Lưu callback Đơn vị QR để chống trùng và kiểm tra lại |
 | Outbox | Bảng lưu việc cần gửi ra ngoài, để có thể gửi lại nếu lỗi | Lưu yêu cầu tạo vận đơn rồi worker gửi cho carrier |
 | Retry/thử lại | Tự động thực hiện lại khi đối tác tạm thời lỗi | API carrier lỗi thì thử lại sau 1, 2, 4 phút |
 | Exponential backoff/giãn cách tăng dần | Mỗi lần thử lại chờ lâu hơn lần trước | 1 phút → 2 phút → 4 phút, tránh gọi dồn dập |
@@ -114,15 +117,17 @@ Tài liệu này giải thích các thuật ngữ bằng ví dụ một cửa h�
 
 ## 7. Ví dụ xuyên suốt một đơn hàng
 
-Giả sử kho có 10 áo size M, giá 150.000 đồng/áo. Khách đặt 2 áo bằng QR:
+Giả sử kho có 10 bộ hàng gia dụng, giá 140.000 đồng/bộ. Khách đặt 2 bộ, phí vận chuyển hiển thị 20.000 đồng và chọn QR:
 
 1. Order module tạo `ord_001` với tổng tiền 300.000 đồng.
-2. Inventory tạo reservation 2 áo; tồn khả dụng từ 10 còn 8.
-3. Payment tạo payment intent và mã QR có reference `ord_001`.
-4. PSP gửi webhook `pay_123 = PAID`. Inbox dùng `pay_123` để chống ghi trùng.
-5. Kho đóng gói. Inventory ghi StockEntry xuất 2 áo và chuyển reservation thành `COMMITTED`.
-6. Shipping ghi OutboxEvent yêu cầu tạo vận đơn. Worker gửi cho carrier và nhận tracking code.
-7. Sau khi giao, kế toán so Payment Ledger 300.000 đồng với statement PSP 300.000 đồng và tiền ngân hàng 300.000 đồng. Ba nguồn khớp nên giao dịch được đóng.
+2. Inventory tạo reservation 2 bộ; tồn khả dụng từ 10 còn 8.
+3. Order tính tiền hàng 280.000 + phí giao khách trả 20.000 = grand total 300.000 đồng.
+4. Payment yêu cầu Ngân hàng/Đơn vị QR tạo intent 300.000 đồng với reference `ord_001`.
+5. Đơn vị QR gửi webhook `pay_123 = PAID`. Inbox dùng `pay_123` để chống ghi trùng; giả định phí QR bằng 0.
+6. Kho đóng gói. Inventory ghi StockEntry xuất 2 bộ và chuyển reservation thành `COMMITTED`.
+7. Shipping ghi OutboxEvent yêu cầu tạo vận đơn với COD amount bằng 0. Worker gửi cho carrier và nhận tracking code.
+8. Sau khi giao, kế toán so Payment Ledger 300.000 đồng với bảng kê Đơn vị QR 300.000 đồng và tiền ngân hàng 300.000 đồng. Ba nguồn khớp nên giao dịch được đóng.
+9. Cuối tháng, hóa đơn vận chuyển của ĐVVC được kiểm và shop thanh toán riêng; hóa đơn này không làm thay đổi trạng thái `PAID` của khách.
 
 Nếu webhook `pay_123` bị gửi lại 9 lần, hệ thống vẫn chỉ có một bút toán nhận tiền. Đây là ý nghĩa của “xử lý lặp an toàn”.
 

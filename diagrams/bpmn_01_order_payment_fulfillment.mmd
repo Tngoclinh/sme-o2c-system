@@ -4,26 +4,29 @@ flowchart LR
     C8[Quét QR] --> C9[Nhận xác nhận/tracking]
   end
   subgraph S[Pool: SME O2C]
-    S1[Validate đơn] --> G1{Đủ tồn?}
+    S1[Validate đơn; tính item + phí giao khách trả] --> G1{Đủ tồn?}
     G1 -- Không --> Sx[Hủy đơn / báo hết hàng]
     G1 -- Có --> S2[Atomic reservation]
     S2 --> G2{Phương thức?}
-    G2 -- COD --> S3[Tạo COD receivable EXPECTED]
-    G2 -- QR --> S4[Tạo Payment Intent + reference]
+    G2 -- COD --> S3[Tạo COD receivable = grand total]
+    G2 -- QR --> S4[Yêu cầu Đơn vị QR tạo intent = grand total]
+    S4a[Nhận QR payload]
     S5[Catch message: payment.paid] --> S6[Confirm Order]
     S4 -. timer hết hạn .-> S7[Expire intent; release reservation]
     S3 --> S6
-    S6 --> S8[Pick & pack] --> S9[Commit stock / tạo shipment] --> S10[Outbox tạo vận đơn]
+    S6 --> S8[Pick & pack] --> S9[Commit stock / tạo shipment] --> S10[Outbox tạo vận đơn: COD=grand total; QR=0]
     S11[Nhận tracking code] --> Se((Kết thúc))
   end
-  subgraph P[Pool: PSP]
-    P1[Hiển thị/xử lý QR] --> P2[Callback có chữ ký + external_ref]
+  subgraph P[Pool: Ngân hàng/Đơn vị cung cấp QR]
+    P1[Tạo, hiển thị và quản lý QR] --> P2[Callback có chữ ký + external_ref]
   end
   subgraph L[Pool: ĐVVC]
     L1[Nhận yêu cầu tạo vận đơn] --> L2[Trả tracking code]
   end
   C2 -. Order message .-> S1
-  S4 -. QR payload .-> C8
+  S4 -. Create intent request .-> P1
+  P1 -. QR payload .-> S4a
+  S4a -. Hiển thị QR .-> C8
   C8 -. Payment request .-> P1
   P2 -. Payment callback .-> S5
   Sx -. Out-of-stock .-> C9
