@@ -8,9 +8,9 @@ ArchiMate là ngôn ngữ dùng để vẽ **bức tranh tổng thể**, không 
 2. **Tầng ứng dụng:** phần mềm nào hỗ trợ công việc đó, ví dụ phân hệ Kho cung cấp chức năng giữ hàng.
 3. **Tầng công nghệ:** phần mềm chạy trên hạ tầng nào, ví dụ ứng dụng chạy trên máy chủ và PostgreSQL.
 
-Phần Motivation ở phía trên giải thích **vì sao** cần thay đổi. Phần Implementation & Migration ở phía dưới giải thích **thay đổi theo thứ tự nào**. BPMN mới là nơi mô tả chi tiết từng bước của quy trình.
+Theo đề bài, tài liệu trình bày lần lượt **Motivation → Business → Application → Technology → Đối tượng dữ liệu và liên kết quan trọng → Các bước chuyển đổi**. BPMN mô tả từng bước của quy trình. Phần Strategy và bảng truy vết mẫu nằm ở cuối để tham khảo thêm.
 
-## 1. Modeling convention
+### Quy ước đọc mô hình
 
 “Phần tử” là một hộp trên sơ đồ; “quan hệ” là đường nối giữa các hộp. Không nên nối các hộp chỉ vì chúng “có liên quan”, mà phải chọn đúng ý nghĩa của đường nối.
 
@@ -26,7 +26,7 @@ Các quan hệ sử dụng:
 - `Flow` — **luồng truyền:** dữ liệu, tiền hoặc hàng đi từ đâu đến đâu; phải ghi rõ thứ được truyền.
 - `Influence` — **tác động:** một động lực hoặc nguyên tắc ảnh hưởng đến mục tiêu/yêu cầu.
 
-## 2. Viewpoint A — Motivation
+## 1. Motivation — Động lực và mục tiêu
 
 Góc nhìn này trả lời “tại sao phải làm hệ thống”. Ví dụ, việc dữ liệu bị phân tán là đánh giá hiện trạng; nó thúc đẩy mục tiêu kiểm soát tiền và tồn kho; mục tiêu sau đó được chuyển thành các yêu cầu cụ thể.
 
@@ -49,28 +49,13 @@ Quan hệ cốt lõi: Stakeholder `Association` Driver; Driver/Assessment `Influ
 
 Trong mọi view, `Ngân hàng/Đơn vị cung cấp thanh toán QR` là một External Actor/Node tổng quát, có thể là ngân hàng có API, cổng thanh toán, PSP hoặc mock. Thành phần này tạo/quản lý QR và thông báo kết quả; không phải ĐVVC và không được mô hình như một module nội bộ của shop.
 
-## 3. Viewpoint B — Strategy
-
-Góc nhìn Strategy trong bài giảng nối mục tiêu kinh doanh với năng lực cần có trước khi đi xuống quy trình và phần mềm. `Resource` là nguồn lực; `Capability` là khả năng tổ chức làm tốt một việc; `Value Stream` là chuỗi bước tạo giá trị; `Course of Action` là hướng hành động được chọn.
-
-**Stakeholder:** chủ shop, quản lý vận hành, kiến trúc sư. **Concern:** phải xây năng lực nào và ưu tiên ra sao. **Purpose:** lập kế hoạch năng lực.
-
-| Loại | Phần tử |
-|---|---|
-| Resource | Nhân viên bán hàng/CSKH; nhân viên kho; kế toán; dữ liệu đơn–tồn–giao–tiền; hợp đồng ĐVVC/Đơn vị QR; nền tảng ứng dụng |
-| Capability | C-01 Điều phối đơn; C-02 Kiểm soát tồn; C-03 Quản lý giao và ngoại lệ; C-04 Nhận/QC hàng hoàn; C-05 Đối soát COD; C-06 Truy vết và báo cáo |
-| Value Stream | VS1 Tiếp nhận đơn → VS2 Xác nhận tiền/giữ hàng → VS3 Xuất và giao → VS4 Xử lý thất bại/hoàn → VS5 Đối soát và đóng đơn |
-| Course of Action | COA-01 Chuẩn hóa dữ liệu/trạng thái; COA-02 Xây O2C tích hợp nhưng gọn; COA-03 Tích hợp phục hồi/chống trùng; COA-04 Đối soát bằng ledger/case |
-
-Course of Action `Realization` Capability; Resource được `Assignment` cho Capability; Capability `Serving` Value Stream; Value Stream `Realization` Value. C-05 hiện thực G-02, C-04/C-02 hiện thực G-03/G-04, C-06 hiện thực G-05 và cách dùng adapter hỗ trợ G-06.
-
-## 4. Viewpoint C — Business Process Cooperation
+## 2. Business — Nghiệp vụ và phối hợp quy trình
 
 Góc nhìn này trả lời “bộ phận nào phối hợp với bộ phận nào”. `Actor` là người/tổ chức; `Role` là vai trò họ đảm nhiệm; `Process` là chuỗi công việc; `Service` là giá trị mà quy trình cung cấp cho bên khác.
 
 **Stakeholder:** vận hành, kho, kế toán, CSKH. **Concern:** ai làm gì và trao đổi gì. **Purpose:** thiết kế/coherence.
 
-### 4.1 Active structure
+### 2.1 Active structure
 
 | Business Actor | Business Role được gán |
 |---|---|
@@ -83,7 +68,7 @@ Business Interface gồm `Website đặt hàng`, `Backoffice vận hành`, `Đi�
 
 Business Flow tiền được tách rõ: với COD, khách trả cho shipper thu hộ, ĐVVC tổng hợp và chuyển tiền vào tài khoản ngân hàng của shop cuối tháng; `Carrier Invoice Payment` là dòng tiền shop trả ĐVVC theo hóa đơn tháng. ĐVVC phải chuyển đủ COD gross sau đối soát sơ bộ; CarrierInvoice không được net-off vào dòng COD. Với QR, Ngân hàng/Đơn vị QR thu grand total, giả định phí bằng 0 và ĐVVC không thu thêm tại cửa.
 
-### 4.2 Behavior và service
+### 2.2 Behavior và service
 
 | Business Process | Business Service được hiện thực | Role thực hiện | Business Object được access |
 |---|---|---|---|
@@ -96,13 +81,13 @@ Business Flow tiền được tách rõ: với COD, khách trả cho shipper thu
 
 Business Event `Order submitted` triggers P1; `Payment confirmed/COD accepted` triggers P2; `Parcel handed over` triggers P4; `Delivery failed/Return requested` triggers P5 theo biến thể; `Statement received` triggers P6. Flow ghi nhãn `order`, `parcel`, `payment`, `statement`, không dùng flow không nhãn.
 
-## 5. Viewpoint D — Application Usage
+## 3. Application — Ứng dụng hỗ trợ nghiệp vụ
 
 Góc nhìn này trả lời “phần mềm nào hỗ trợ quy trình nào”. `Component` có thể hiểu là phân hệ phần mềm; `Function` là logic bên trong; `Application Service` là chức năng mà phân hệ cung cấp cho phần khác sử dụng.
 
 **Stakeholder:** product owner, architect, developer. **Concern:** component nào hỗ trợ process nào. **Purpose:** thiết kế target.
 
-### 5.1 Component, function và service
+### 3.1 Component, function và service
 
 | Application Component | Application Function | Application Service hiện thực | Phục vụ Business Process |
 |---|---|---|---|
@@ -118,7 +103,7 @@ Góc nhìn này trả lời “phần mềm nào hỗ trợ quy trình nào”. 
 
 Quan hệ: Component `Assignment` Function; Function `Realization` Application Service; Application Service `Serving` Business Process; Function `Access` Data Object. Giữa component chỉ dùng `Serving` khi cung cấp chức năng, `Flow` khi cần nhấn mạnh dữ liệu/sự kiện truyền.
 
-### 5.2 Application interface, collaboration và event
+### 3.2 Application interface, collaboration và event
 
 | Application Interface | Bên cung cấp → bên dùng | Dữ liệu/sự kiện chính |
 |---|---|---|
@@ -130,38 +115,7 @@ Quan hệ: Component `Assignment` Function; Function `Realization` Application S
 
 Application Collaboration `Order Fulfillment` gồm Order + Inventory + Shipping; `Financial Closing` gồm Payment + Reconciliation. Application Event như `OrderConfirmed`, `StockReserved`, `ShipmentDelivered/Failed/Returned`, `PaymentConfirmed`, `MonthlyCODStatementImported`, `CODRemittanceReceived` và `CarrierInvoiceImported` kích hoạt function kế tiếp. Inbox/outbox bảo đảm sự kiện gửi lặp không tạo tác dụng kép.
 
-### 5.3 Data Object và ownership
-
-Mỗi loại dữ liệu có đúng một phân hệ chịu trách nhiệm chính. Trạng thái Đơn hàng, Thanh toán, Vận chuyển và Đổi trả được tách riêng vì một đơn có thể đã giao thành công nhưng khoản tiền vẫn chưa được đối soát.
-
-| Data Object | Owner | Trạng thái chính / quy tắc |
-|---|---|---|
-| Order | Order | Lưu item subtotal, customer shipping charge và grand total; DRAFT → PENDING_PAYMENT/CONFIRMED → FULFILLING → COMPLETED/CANCELLED; không chứa shipment state |
-| Reservation | Inventory | ACTIVE → COMMITTED/RELEASED/EXPIRED |
-| StockEntry | Inventory | Append-only: RESERVE, RELEASE, SHIP, RETURN_TO_QC, RESTOCK, QUARANTINE, ADJUST |
-| Payment | Payment | PENDING → AUTHORIZED/PAID/FAILED/EXPIRED → PARTIALLY_REFUNDED/REFUNDED |
-| PaymentEntry | Payment | Append-only expected/collected/paid/remitted/refund/adjustment; giả định không có QR fee và không ghi carrier invoice vào đây |
-| Shipment | Fulfillment/Shipping | CREATED → HANDED_OVER → IN_TRANSIT → DELIVERED/FAILED → RETURNING/RETURNED |
-| ShipmentEvent | Fulfillment/Shipping | external_event_id unique, raw status + canonical status |
-| Return/RMA | Return | REQUESTED → APPROVED/REJECTED → IN_TRANSIT → RECEIVED → QC_PASSED/QC_FAILED → CLOSED |
-| Statement/Remittance | Reconciliation | COD/QR statement và tiền chuyển về: IMPORTED → MATCHED/PARTIAL/DISCREPANT → CLOSED |
-| CarrierInvoice | Reconciliation | Hóa đơn phí vận chuyển tháng: RECEIVED → VERIFIED/DISPUTED → APPROVED → PAID; tách khỏi COD remittance |
-| ReconciliationCase | Reconciliation | OPEN → INVESTIGATING → RESOLVED/WRITTEN_OFF |
-| OutboxEvent/InboxEvent | Module phát/nhận | PENDING → SENT/PROCESSED/FAILED; idempotency key unique |
-
-Business Object được Data Object tương ứng `Realization`; file CSV/PDF gốc được mô hình là Artifact hiện thực Data Object Statement.
-
-### 5.4 Kiến trúc dữ liệu theo ba mức của bài giảng
-
-| Mức | Mục đích | Nội dung trong bài |
-|---|---|---|
-| Khái niệm (conceptual) | Cho nghiệp vụ thấy khái niệm chính | Customer đặt Order; Order có OrderLine và CustomerShippingCharge; Order có Payment và Shipment; Shipment có DeliveryAttempt; ĐVVC gửi CODStatement/CODRemittance và CarrierInvoice tách biệt; Payment/Shipment được đối soát trong ReconciliationCase |
-| Logic (logical) | Chỉ ra thực thể, khóa và quan hệ không phụ thuộc DB | Các đối tượng trong catalog trên; `order_id` là mã xuyên suốt; `external_event_id` và `tracking_code/RMA` có ràng buộc duy nhất phù hợp |
-| Vật lý (physical) | Chỉ ra cách lưu và bảo vệ | PostgreSQL schema theo module; transaction/unique constraint; ledger append-only; object storage cho chứng từ; index theo order/reference/time; backup và retention |
-
-Vòng đời dữ liệu: tạo → sử dụng/chia sẻ qua API/event → đối soát → lưu giữ → ẩn/xóa theo chính sách. Owner nghiệp vụ phê duyệt định nghĩa và chất lượng; application owner chịu ghi đúng; IT chịu backup, quyền truy cập, mã hóa đường truyền và log. Business Object được `Realization` bởi Data Object; thuật ngữ nghiệp vụ nối tới trường dữ liệu, quy trình tới subject area và KPI tới measure đúng theo information value chain trong slide Data Architecture.
-
-## 6. Viewpoint E — Technology
+## 4. Technology — Hạ tầng và vận hành
 
 Góc nhìn này cho biết ứng dụng được triển khai ở đâu. Máy chủ là nơi chạy; PostgreSQL là phần mềm quản trị cơ sở dữ liệu; file cài đặt, file bảng kê và file sao lưu là các “hiện vật” cụ thể. Dịch vụ công nghệ là khả năng hạ tầng cung cấp, ví dụ lưu dữ liệu hoặc sao lưu–khôi phục.
 
@@ -183,7 +137,40 @@ Deployment target là một modular monolith sau reverse proxy, PostgreSQL và w
 
 Technology Function gồm terminate TLS, execute application, persist transaction, schedule retry, collect log và backup/restore. Technology Process `Nightly Backup` tạo Artifact backup; Technology Event `Health Check Failed` kích hoạt cảnh báo/khởi động lại. Security mapping: RBAC cho backoffice; TLS; secret từ environment/secret store; allow-list/signature/token cho callback; rate limit; log masking; DB backup và restore test. Thiết kế lưu inbox/outbox trong DB nên không cần message broker riêng ở quy mô giả định.
 
-## 7. Viewpoint F — Implementation & Migration
+## 5. Đối tượng dữ liệu và liên kết quan trọng
+
+### 5.1 Data Object và ownership
+
+Mỗi loại dữ liệu có đúng một phân hệ chịu trách nhiệm chính. Trạng thái Đơn hàng, Thanh toán, Vận chuyển và Đổi trả được tách riêng vì một đơn có thể đã giao thành công nhưng khoản tiền vẫn chưa được đối soát.
+
+| Data Object | Owner | Trạng thái chính / quy tắc |
+|---|---|---|
+| Order | Order | Lưu item subtotal, customer shipping charge và grand total; DRAFT → PENDING_PAYMENT/CONFIRMED → FULFILLING → COMPLETED/CANCELLED; không chứa shipment state |
+| Reservation | Inventory | ACTIVE → COMMITTED/RELEASED/EXPIRED |
+| StockEntry | Inventory | Append-only: RESERVE, RELEASE, SHIP, RETURN_TO_QC, RESTOCK, QUARANTINE, ADJUST |
+| Payment | Payment | PENDING → AUTHORIZED/PAID/FAILED/EXPIRED → PARTIALLY_REFUNDED/REFUNDED |
+| PaymentEntry | Payment | Append-only expected/collected/paid/remitted/refund/adjustment; giả định không có QR fee và không ghi carrier invoice vào đây |
+| Shipment | Fulfillment/Shipping | CREATED → HANDED_OVER → IN_TRANSIT → DELIVERED/FAILED → RETURNING/RETURNED |
+| ShipmentEvent | Fulfillment/Shipping | external_event_id unique, raw status + canonical status |
+| Return/RMA | Return | REQUESTED → APPROVED/REJECTED → IN_TRANSIT → RECEIVED → QC_PASSED/QC_FAILED → CLOSED |
+| Statement/Remittance | Reconciliation | COD/QR statement và tiền chuyển về: IMPORTED → MATCHED/PARTIAL/DISCREPANT → CLOSED |
+| CarrierInvoice | Reconciliation | Hóa đơn phí vận chuyển tháng: RECEIVED → VERIFIED/DISPUTED → APPROVED → PAID; tách khỏi COD remittance |
+| ReconciliationCase | Reconciliation | OPEN → INVESTIGATING → RESOLVED/WRITTEN_OFF |
+| OutboxEvent/InboxEvent | Module phát/nhận | PENDING → SENT/PROCESSED/FAILED; idempotency key unique |
+
+Business Object được Data Object tương ứng `Realization`; file CSV/PDF gốc được mô hình là Artifact hiện thực Data Object Statement.
+
+### 5.2 Kiến trúc dữ liệu theo ba mức của bài giảng
+
+| Mức | Mục đích | Nội dung trong bài |
+|---|---|---|
+| Khái niệm (conceptual) | Cho nghiệp vụ thấy khái niệm chính | Customer đặt Order; Order có OrderLine và CustomerShippingCharge; Order có Payment và Shipment; Shipment có DeliveryAttempt; ĐVVC gửi CODStatement/CODRemittance và CarrierInvoice tách biệt; Payment/Shipment được đối soát trong ReconciliationCase |
+| Logic (logical) | Chỉ ra thực thể, khóa và quan hệ không phụ thuộc DB | Các đối tượng trong catalog trên; `order_id` là mã xuyên suốt; `external_event_id` và `tracking_code/RMA` có ràng buộc duy nhất phù hợp |
+| Vật lý (physical) | Chỉ ra cách lưu và bảo vệ | PostgreSQL schema theo module; transaction/unique constraint; ledger append-only; object storage cho chứng từ; index theo order/reference/time; backup và retention |
+
+Vòng đời dữ liệu: tạo → sử dụng/chia sẻ qua API/event → đối soát → lưu giữ → ẩn/xóa theo chính sách. Owner nghiệp vụ phê duyệt định nghĩa và chất lượng; application owner chịu ghi đúng; IT chịu backup, quyền truy cập, mã hóa đường truyền và log. Business Object được `Realization` bởi Data Object; thuật ngữ nghiệp vụ nối tới trường dữ liệu, quy trình tới subject area và KPI tới measure đúng theo information value chain trong slide Data Architecture.
+
+## 6. Các bước chuyển đổi (Implementation & Migration)
 
 Góc nhìn này là bản đồ triển khai. `Work Package` là một gói việc có thể giao và nghiệm thu; `Plateau` là một mốc mà kiến trúc đã đạt trạng thái ổn định tạm thời.
 
@@ -200,7 +187,22 @@ Góc nhìn này là bản đồ triển khai. `Work Package` là một gói vi�
 
 Implementation Event gồm `M1 chuẩn hóa được phê duyệt`, `M2 đơn–tồn chạy thử`, `M3 luồng giao/hoàn chạy E2E`, `M4 đối soát COD đạt kiểm thử` và `M5 nghiệm thu pilot`. Work Package `Realization` Deliverable; Deliverable `Realization` Plateau; Gap `Association` Work Package; Triggering thể hiện dependency WP-01 → WP-02 → WP-03 → WP-04 → WP-05.
 
-## 8. Cross-layer trace mẫu
+## Phụ lục A — Strategy
+
+Góc nhìn Strategy trong bài giảng nối mục tiêu kinh doanh với năng lực cần có trước khi đi xuống quy trình và phần mềm. `Resource` là nguồn lực; `Capability` là khả năng tổ chức làm tốt một việc; `Value Stream` là chuỗi bước tạo giá trị; `Course of Action` là hướng hành động được chọn.
+
+**Stakeholder:** chủ shop, quản lý vận hành, kiến trúc sư. **Concern:** phải xây năng lực nào và ưu tiên ra sao. **Purpose:** lập kế hoạch năng lực.
+
+| Loại | Phần tử |
+|---|---|
+| Resource | Nhân viên bán hàng/CSKH; nhân viên kho; kế toán; dữ liệu đơn–tồn–giao–tiền; hợp đồng ĐVVC/Đơn vị QR; nền tảng ứng dụng |
+| Capability | C-01 Điều phối đơn; C-02 Kiểm soát tồn; C-03 Quản lý giao và ngoại lệ; C-04 Nhận/QC hàng hoàn; C-05 Đối soát COD; C-06 Truy vết và báo cáo |
+| Value Stream | VS1 Tiếp nhận đơn → VS2 Xác nhận tiền/giữ hàng → VS3 Xuất và giao → VS4 Xử lý thất bại/hoàn → VS5 Đối soát và đóng đơn |
+| Course of Action | COA-01 Chuẩn hóa dữ liệu/trạng thái; COA-02 Xây O2C tích hợp nhưng gọn; COA-03 Tích hợp phục hồi/chống trùng; COA-04 Đối soát bằng ledger/case |
+
+Course of Action `Realization` Capability; Resource được `Assignment` cho Capability; Capability `Serving` Value Stream; Value Stream `Realization` Value. C-05 hiện thực G-02, C-04/C-02 hiện thực G-03/G-04, C-06 hiện thực G-05 và cách dùng adapter hỗ trợ G-06.
+
+## Phụ lục B — Truy vết giữa các lớp
 
 | Requirement | Business Process | Application Service/Component | Technology Service | Work Package |
 |---|---|---|---|---|

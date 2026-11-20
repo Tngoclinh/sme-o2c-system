@@ -12,14 +12,14 @@ Bộ tài liệu hiện đi đúng hướng thiết kế kiến trúc doanh nghi
 |---|---|---|---|
 | Chapter 1 — Introduction | Business–Data–Application–Technology liên kết và phục vụ mục tiêu | `01`, `02`, ma trận truy vết `05` | Đạt |
 | Chapter 2 — Architecture Framework | ADM lặp, Requirements Management, Baseline/Target/Gap, roadmap | `01` mục 1–8 | Đạt theo phạm vi chọn lọc A–F của đề; không cần chép mọi biểu mẫu ADM |
-| Chapter 2.1 — ArchiMate | Active/passive structure, behavior, service; quan hệ đúng nghĩa | `02` mục 1 và các viewpoint | Đạt về catalog/quan hệ; cần xuất sơ đồ chuẩn |
-| Chapter 3 — Business Architecture | Actor, Role, Interface, Process, Event, Service, Object, Contract, Representation, Product | `02` mục 4; `03` | Đạt |
-| Chapter 4 — Application Architecture | Component, Collaboration, Interface, Function/Process/Event/Service, Data Object | `02` mục 5 | Đạt |
-| Chapter 4 — Data Architecture | Conceptual/logical/physical, ownership, lifecycle, security, information value chain | `02` mục 5.3–5.4 | Đạt ở mức thiết kế; cần vẽ ERD logic nếu giảng viên yêu cầu hình |
-| Chapter 5 — Technology Architecture | Node, Device, System Software, Artifact, Network, Path, Interface, Technology behavior/service | `02` mục 6 | Đạt |
-| Chapter 6 — Motivation | Stakeholder, Driver, Assessment, Goal, Outcome, Principle, Requirement, Constraint, Meaning, Value | `02` mục 2 | Đạt |
-| Chapter 7 — Strategy | Resource, Capability, Value Stream, Course of Action | `02` mục 3 | Đạt |
-| Chapter 8 — Implementation & Migration | Work Package, Deliverable, Event, Plateau, Gap | `01` mục 5–7; `02` mục 7 | Đạt |
+| Chapter 2.1 — ArchiMate | Active/passive structure, behavior, service; quan hệ đúng nghĩa | `02` Quy ước đọc mô hình và các mục 1–6 | Đạt về catalog/quan hệ; cần xuất sơ đồ chuẩn |
+| Chapter 3 — Business Architecture | Actor, Role, Interface, Process, Event, Service, Object, Contract, Representation, Product | `02` mục 2; `03` | Đạt |
+| Chapter 4 — Application Architecture | Component, Collaboration, Interface, Function/Process/Event/Service, Data Object | `02` mục 3 | Đạt |
+| Chapter 4 — Data Architecture | Conceptual/logical/physical, ownership, lifecycle, security, information value chain | `02` mục 5.1–5.2 | Đạt ở mức thiết kế; cần vẽ ERD logic nếu giảng viên yêu cầu hình |
+| Chapter 5 — Technology Architecture | Node, Device, System Software, Artifact, Network, Path, Interface, Technology behavior/service | `02` mục 4 | Đạt |
+| Chapter 6 — Motivation | Stakeholder, Driver, Assessment, Goal, Outcome, Principle, Requirement, Constraint, Meaning, Value | `02` mục 1 | Đạt |
+| Chapter 7 — Strategy | Resource, Capability, Value Stream, Course of Action | `02` Phụ lục A | Đạt |
+| Chapter 8 — Implementation & Migration | Work Package, Deliverable, Event, Plateau, Gap | `01` mục 5–7; `02` mục 6 | Đạt |
 | Chapter 9 — Case Study | Đi từ motivation/strategy qua các lớp, gap và migration | Toàn bộ `01`–`06` | Đạt về cấu trúc |
 
 ## 3. Đối chiếu trực tiếp đề BTL
@@ -28,14 +28,14 @@ Bộ tài liệu hiện đi đúng hướng thiết kế kiến trúc doanh nghi
 |---|---|---|
 | Bối cảnh, stakeholder, FR/NFR | `01` mục 1–4 | Đạt; dùng đúng FR-01…12, NFR-01…08 |
 | Architecture Vision | `01` mục 2 | Đạt |
-| Baseline/Target/Gap | `01` mục 5.1–5.4 và `02` mục 7 | Đối chiếu bốn miền, có mã gap liên kết đến work package |
-| Roadmap chuyển đổi | `01` mục 7; `02` mục 7 | Đạt, gồm WP-01…05 và ba giai đoạn |
-| ArchiMate Motivation | `02` mục 2 | Đạt |
-| ArchiMate Business | `02` mục 4 | Đạt |
-| ArchiMate Application | `02` mục 5 | Đạt |
-| ArchiMate Technology | `02` mục 6 | Đạt |
-| Data object và liên kết quan trọng | `02` mục 5.3–5.4 | Đạt |
-| Các bước migration | `02` mục 7 | Đạt |
+| Baseline/Target/Gap | `01` mục 5.1–5.4 và `02` mục 6 | Đối chiếu bốn miền, có mã gap liên kết đến work package |
+| Roadmap chuyển đổi | `01` mục 7; `02` mục 6 | Đạt, gồm WP-01…05 và ba giai đoạn |
+| ArchiMate Motivation | `02` mục 1 | Đạt |
+| ArchiMate Business | `02` mục 2 | Đạt |
+| ArchiMate Application | `02` mục 3 | Đạt |
+| ArchiMate Technology | `02` mục 4 | Đạt |
+| Data object và liên kết quan trọng | `02` mục 5.1–5.2 | Đạt |
+| Các bước migration | `02` mục 6 | Đạt |
 | Tối thiểu 02 BPMN, có luồng chính và ngoại lệ | `03` có 03 quy trình | Đạt về logic; cần xuất file BPMN 2.0 |
 | Tối thiểu 02 ADR, mỗi ADR so ≥2 phương án | `04` có 04 ADR | Đạt |
 | Trace tối thiểu 03 yêu cầu | `05` mục 4 trace toàn bộ | Đạt |
