@@ -47,21 +47,26 @@ Góc nhìn này trả lời “tại sao phải làm hệ thống”. Ví dụ, 
 
 #### Giải thích các phần tử Motivation
 
-- **Stakeholder (bên liên quan):** Chủ shop muốn theo dõi tiền COD, kho cần biết hàng nào có thể bán lại, còn khách cần biết đơn đang ở đâu.
-- **Driver và Assessment (động lực và đánh giá):** Số đơn giao thất bại tạo áp lực xử lý hàng quay về. Qua rà soát hiện trạng, nhóm thấy thông tin về lần giao, kiện hoàn và tiền thu hộ đang nằm ở nhiều nơi.
-- **Goal và Outcome (mục tiêu và kết quả):** G-04 đặt mục tiêu tồn kho chính xác. O-04 mô tả kết quả cần thấy khi vận hành, chẳng hạn chỉ cộng hàng quay về vào tồn có thể bán sau khi kho nhận và kiểm tra đạt.
-- **Principle, Requirement và Constraint (nguyên tắc, yêu cầu và ràng buộc):** AP-02 yêu cầu thiết kế tách trạng thái đơn, giao hàng và thanh toán. FR-08 quy định hệ thống phải đối chiếu tiền COD. C-02 giới hạn thiết kế trong phạm vi một kho trung tâm.
-- **Meaning và Value (ý nghĩa và giá trị):** Trạng thái “đã giao” mô tả kết quả giao kiện hàng. Kế toán cần thêm chứng từ tiền chuyển để xác nhận shop đã nhận COD. Lợi ích là nhìn ra tiền còn treo và biết đơn nào cần kiểm tra.
+- **Stakeholder (bên liên quan)** là cá nhân, nhóm hoặc tổ chức có mối quan tâm đến kiến trúc hoặc chịu ảnh hưởng từ thay đổi.
+- **Driver (động lực)** là yếu tố bên trong hoặc bên ngoài thúc đẩy tổ chức đặt mục tiêu và thay đổi cách vận hành.
+- **Assessment (đánh giá)** là nhận định rút ra khi phân tích hiện trạng dưới góc độ một động lực.
+- **Goal (mục tiêu)** mô tả định hướng hoặc trạng thái tổ chức muốn đạt tới.
+- **Outcome (kết quả)** mô tả kết quả cụ thể có thể quan sát để đánh giá mức độ đạt mục tiêu.
+- **Principle (nguyên tắc)** là quy tắc chung định hướng các quyết định kiến trúc.
+- **Requirement (yêu cầu)** mô tả chức năng hoặc đặc tính mà hệ thống cần đáp ứng.
+- **Constraint (ràng buộc)** xác định giới hạn về phạm vi, nguồn lực hoặc điều kiện mà thiết kế phải tuân theo.
+- **Meaning (ý nghĩa)** giải thích một phần tử có ý nghĩa gì trong ngữ cảnh đang xét.
+- **Value (giá trị)** thể hiện lợi ích, tầm quan trọng hoặc mức hữu ích của một kết quả đối với bên liên quan.
 
 #### Quan hệ chính cần thể hiện
 
-1. **Stakeholder — `Association` — Driver.** Nhân viên kế toán liên quan đến động lực “Khó đối soát COD/QR” vì phải xác minh số tiền ĐVVC đã thu và số tiền thực tế shop nhận được.
-2. **Driver — `Influence` → Assessment.** Khó đối soát COD khiến nhóm kiểm tra cách lưu chứng từ hiện tại. Đánh giá “Dữ liệu phân tán” ghi nhận bảng kê ĐVVC, thông tin đơn và sao kê ngân hàng nằm ở các nguồn riêng.
-3. **Assessment — `Influence` → Goal.** Việc phải dò dữ liệu ở nhiều nguồn làm chậm xác nhận tiền về và thúc đẩy mục tiêu **G-02 — Cải thiện đối soát COD**.
-4. **Principle — `Influence` → Requirement.** **AP-03 — Truy vết thay đổi** định hướng **NFR-06 — Khả năng truy vết**. Khi điều chỉnh một khoản COD, hệ thống phải lưu mã tham chiếu, thời điểm, nguồn và người hoặc hệ thống thực hiện.
-5. **Constraint — `Influence` → Requirement.** **C-02 — Một kho trung tâm** xác định phạm vi của **FR-07 — Nhận, kiểm và cập nhật tồn hàng hoàn**. Kiện quay về được tiếp nhận và kiểm tại kho trung tâm trước khi cập nhật hàng có thể bán.
-6. **Requirement — `Realization` → Outcome.** **FR-08** yêu cầu đối chiếu số COD theo đơn, bảng kê ĐVVC và tiền vào tài khoản shop. **FR-09** yêu cầu lập hồ sơ cho khoản lệch. Hai yêu cầu góp phần tạo ra **O-02 — Tiền COD giải thích được**.
-7. **Outcome — `Realization` → Goal.** Khi kế toán có thể giải thích khoản nào đã thu, khoản nào đã chuyển và khoản nào còn lệch (**O-02**), kết quả đó hiện thực hóa mục tiêu **G-02 — Cải thiện đối soát COD**.
+1. **Stakeholder — `Association` — Driver.** Chỉ ra bên nào quan tâm đến hoặc chịu tác động từ một động lực thay đổi.
+2. **Driver — `Influence` → Assessment.** Động lực định hướng vấn đề cần xem xét khi phân tích hiện trạng.
+3. **Assessment — `Influence` → Goal.** Nhận định về hiện trạng ảnh hưởng đến việc xác định mục tiêu hoặc mức ưu tiên của mục tiêu.
+4. **Principle — `Influence` → Requirement.** Nguyên tắc chung định hướng cách đặt ra các yêu cầu cụ thể.
+5. **Constraint — `Influence` → Requirement.** Ràng buộc ảnh hưởng đến phạm vi hoặc điều kiện mà yêu cầu phải đáp ứng.
+6. **Requirement — `Realization` → Outcome.** Việc đáp ứng một hoặc nhiều yêu cầu góp phần tạo ra kết quả cụ thể.
+7. **Outcome — `Realization` → Goal.** Kết quả đạt được thể hiện một phần hoặc toàn bộ mục tiêu ở mức cụ thể hơn.
 
 Trong mọi view, `Ngân hàng/Đơn vị cung cấp thanh toán QR` là một External Actor/Node tổng quát, có thể là ngân hàng có API, cổng thanh toán, PSP hoặc mock. Thành phần này tạo/quản lý QR và thông báo kết quả; không phải ĐVVC và không được mô hình như một module nội bộ của shop.
 
