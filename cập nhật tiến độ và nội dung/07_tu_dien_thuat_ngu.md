@@ -14,7 +14,7 @@ Tài liệu này giải thích các thuật ngữ bằng ví dụ một cửa h�
 | PSP | Viết tắt của Payment Service Provider; chỉ là một loại Đơn vị cung cấp thanh toán QR | Tài liệu dùng tên tổng quát thay vì giả định một PSP cụ thể |
 | Payment intent | Bản ghi cho biết Đơn vị QR đang quản lý một khoản khách cần thanh toán cho một đơn | Chờ 300.000 đồng gồm tiền hàng và phí giao khách trả cho đơn `ord_001` |
 | Mã tham chiếu (reference) | Mã dùng để biết một khoản tiền thuộc đơn nào | Nội dung chuyển khoản chứa `ord_001` |
-| COD remittance/chuyển tiền COD | Toàn bộ tiền COD ĐVVC đã thu được chuyển về tài khoản shop sau đối soát tháng | ĐVVC thu 300.000 đồng và chuyển đủ 300.000 đồng; không trừ phí vận chuyển |
+| COD remittance/chuyển tiền COD | Toàn bộ tiền COD ĐVVC đã thu được chuyển về tài khoản shop sau đối soát tháng | Shipper thu 300.000 đồng thay mặt ĐVVC. Cuối tháng ĐVVC chuyển đủ 300.000 đồng vào tài khoản shop. Shop thanh toán hóa đơn vận chuyển riêng |
 | Customer Shipping Charge/phí giao thu khách | Khoản shop hiển thị ở checkout và cộng vào tổng tiền khách phải trả | Tiền hàng 280.000 + phí giao khách trả 20.000 = tổng đơn 300.000 |
 | Carrier Shipping Expense/chi phí vận chuyển | Chi phí dịch vụ shop phải trả ĐVVC, khác với phí shop thu khách | ĐVVC xuất hóa đơn tháng 20.000 đồng và shop thanh toán riêng |
 | Carrier Invoice/hóa đơn ĐVVC | Hóa đơn phí vận chuyển theo kỳ, được kiểm theo vận đơn và biểu phí | Hóa đơn tháng được duyệt rồi shop chuyển khoản riêng, không bù trừ COD |

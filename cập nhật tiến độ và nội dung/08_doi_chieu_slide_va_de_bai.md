@@ -28,7 +28,7 @@ Bộ tài liệu hiện đi đúng hướng thiết kế kiến trúc doanh nghi
 |---|---|---|
 | Bối cảnh, stakeholder, FR/NFR | `01` mục 1–4 | Đạt; dùng đúng FR-01…12, NFR-01…08 |
 | Architecture Vision | `01` mục 2 | Đạt |
-| Baseline/Target/Gap | `01` mục 5 | Đạt |
+| Baseline/Target/Gap | `01` mục 5.1–5.4 và `02` mục 7 | Đối chiếu bốn miền, có mã gap liên kết đến work package |
 | Roadmap chuyển đổi | `01` mục 7; `02` mục 7 | Đạt, gồm WP-01…05 và ba giai đoạn |
 | ArchiMate Motivation | `02` mục 2 | Đạt |
 | ArchiMate Business | `02` mục 4 | Đạt |

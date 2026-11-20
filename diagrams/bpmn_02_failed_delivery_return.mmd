@@ -19,7 +19,10 @@ flowchart TD
   G4 -- QR chưa giao/RTO hoặc trả hàng --> D1[Tạo refund theo approval]
   G4 -- COD đã thu, trả hàng --> D2[Tạo nghĩa vụ hoàn tiền]
   G4 -- Đổi hàng --> D3[Reserve SKU thay thế + tạo shipment mới]
-  G4 -- COD chưa thu/RTO --> D4[Đóng COD expected = uncollected]
+  G4 -- COD chuyển hoàn --> D9{Xác nhận chưa thu tiền?}
+  D9 -- Có --> D4[Ghi UNCOLLECTED và loại khỏi khoản phải chuyển]
+  D9 -- Đã thu hoặc chưa rõ --> D10[Chuyển kế toán xác minh COD]
+  D10 --> Ef((Chờ xử lý COD))
   D1 --> D5[Nhận refund callback]
   D2 --> D6[Record payout reference]
   D3 --> D7[Link replacement order]

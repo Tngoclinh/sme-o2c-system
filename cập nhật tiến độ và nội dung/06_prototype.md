@@ -135,7 +135,7 @@ UI không gộp một badge duy nhất cho toàn bộ order; hiển thị bốn 
 1. Tạo COD order A có hàng 280000 + phí vận chuyển thu khách 20000; fulfill với expected COD và `shipment.cod_amount` đều bằng 300000.
 2. Tạo COD order B rồi cho carrier gửi `delivery_failed` hai lần; lần đầu retry, lần hai `RETURNING`; gửi lặp event để chứng minh idempotency.
 3. Kho nhận RTO của B, QC pass; một `RETURN_TO_QC`, một `RESTOCK`; COD expected của B đóng `UNCOLLECTED`.
-4. Cuối tháng, import bảng kê cho biết ĐVVC đã thu 300000 của A nhưng ngân hàng mới nhận 280000; đồng thời import CarrierInvoice 20000 ở luồng riêng. Engine vẫn tạo `MISSING_REMITTANCE_20000`, không lấy invoice bù vào COD.
+4. Shipper giao A thành công và thu 300000 từ khách thay mặt ĐVVC. Cuối tháng, nhập bảng kê đã thu 300000 của A nhưng ngân hàng mới nhận 280000; đồng thời import CarrierInvoice 20000 ở luồng riêng. Engine vẫn tạo `MISSING_REMITTANCE_20000`, không lấy invoice bù vào COD.
 5. Khi ĐVVC chuyển bù 20000, case COD được đóng. Kế toán kiểm CarrierInvoice theo tracking/biểu phí, phê duyệt và shop thanh toán 20000 bằng bank reference riêng.
 
 ## 6. Security và dữ liệu demo

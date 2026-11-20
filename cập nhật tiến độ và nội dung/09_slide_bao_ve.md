@@ -43,12 +43,12 @@ Biến thể II-B:
 
 # 3. TOGAF: hiện trạng → kiến trúc đích
 
-| Hiện trạng | Kiến trúc đích | Khoảng thiếu |
-|---|---|---|
-| Đơn xuất file | OMS là nguồn chính | vòng đời, mã liên kết |
-| Tồn bảng tính | reservation + stock ledger | chống bán vượt, QC |
-| Theo dõi giao thủ công | adapter + webhook + RTO | mapping, retry |
-| Dò COD cuối kỳ | ledger + đối soát ba chiều | expected, case |
+| Miền | Hiện trạng | Kiến trúc đích | Khoảng thiếu |
+|---|---|---|---|
+| Nghiệp vụ | Chép đơn, dò bảng kê COD | Bàn giao đơn và xác nhận tiền về theo quy trình | Thiếu luồng bàn giao và bước kiểm tiền vào tài khoản |
+| Dữ liệu | Mã đơn, vận đơn, chứng từ rời rạc | Mã liên kết và lịch sử riêng từng loại | Thiếu định danh và lịch sử truy vết |
+| Ứng dụng | Excel, tra cứu giao thủ công | OMS, phân hệ kho, tích hợp ĐVVC và đối soát | Thiếu kết nối và xử lý sự kiện tập trung |
+| Công nghệ | Hồ sơ nằm trên máy cá nhân | Hạ tầng tập trung, phân quyền và sao lưu | Thiếu kiểm soát truy cập và khôi phục |
 
 Lộ trình: WP-01 chuẩn hóa → WP-02 đơn/tồn → WP-03 giao/hoàn → WP-04 đối soát → WP-05 kiểm soát vận hành.
 
@@ -106,7 +106,7 @@ Lý do chưa dùng microservice/broker: quy mô nhỏ, nhóm ít người; chưa
 2. Inventory giữ chỗ nguyên tử.
 3. QR intent hoặc COD receivable đều bằng grand total; QR fee giả định bằng 0.
 4. Kho đóng gói, bàn giao; ĐVVC cập nhật trạng thái.
-5. Vận đơn QR có COD=0; COD giao thành công chờ bảng kê và remittance tháng.
+5. Khi giao thành công, shipper thu COD thay mặt ĐVVC. Đến kỳ tháng, ĐVVC chuyển đủ COD vào tài khoản shop. Shop thanh toán hóa đơn vận chuyển riêng. Vận đơn QR có COD bằng 0.
 
 > Chèn BPMN-01; chỉ ra pool/lane, message event, gateway và timer QR.
 

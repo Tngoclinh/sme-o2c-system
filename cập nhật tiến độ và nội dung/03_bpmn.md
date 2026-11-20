@@ -20,7 +20,7 @@ Ba sơ đồ được tách theo ba câu hỏi: xử lý một đơn mới thế
 
 ### Giải thích bằng lời
 
-Khách gửi đơn. Shop tính `tổng tiền khách trả = tiền hàng sau giảm giá + phí vận chuyển thu khách`, rồi hỏi phân hệ Kho xem còn hàng không. Nếu hết hàng, đơn dừng. Nếu còn hàng, Kho tạm giữ số lượng cần mua. Với COD, hệ thống tạo khoản phải thu đúng bằng tổng đơn và gửi chính số đó cho ĐVVC. Với QR, Ngân hàng/Đơn vị cung cấp thanh toán QR tạo và quản lý Payment Intent đúng bằng tổng đơn; hệ thống chỉ xác nhận sau thông báo thanh toán hợp lệ. Khi tạo vận đơn QR, COD amount bằng 0 nên ĐVVC không thu thêm tiền tại cửa.
+Khách gửi đơn. Shop tính `tổng tiền khách trả = tiền hàng sau giảm giá + phí vận chuyển thu khách`, rồi hỏi phân hệ Kho xem còn hàng không. Nếu hết hàng, đơn dừng. Nếu còn hàng, Kho tạm giữ số lượng cần mua. Với COD, hệ thống tạo khoản phải thu đúng bằng tổng đơn và gửi chính số đó cho ĐVVC. Khi giao thành công, shipper thu đúng số trên vận đơn thay mặt ĐVVC. Shop ghi nhận kết quả giao và số ĐVVC báo thu, rồi dùng BPMN-03 để xác nhận tiền thực nhận. Với QR, Ngân hàng/Đơn vị cung cấp thanh toán QR tạo và quản lý Payment Intent đúng bằng tổng đơn; hệ thống chỉ xác nhận sau thông báo thanh toán hợp lệ. Khi tạo vận đơn QR, COD amount bằng 0 nên ĐVVC không thu thêm tiền tại cửa.
 
 ### 1.1 Đặc tả
 
@@ -30,8 +30,8 @@ Khách gửi đơn. Shop tính `tổng tiền khách trả = tiền hàng sau gi
 | Pool | Khách hàng; SME O2C; Ngân hàng/Đơn vị cung cấp thanh toán QR; ĐVVC |
 | Lane SME | Storefront/Order; Payment; Inventory; Warehouse/Shipping |
 | Pre-condition | SKU có dữ liệu tồn và phương thức thanh toán hợp lệ |
-| End success | Shipment `HANDED_OVER`, Order `FULFILLING`; QR `PAID` hoặc COD receivable `EXPECTED` |
-| End alternate | Order `CANCELLED`; reservation được release; payment intent expired/failed |
+| End success | Shipment `DELIVERED`. Đơn QR đã `PAID` trước khi giao và vận đơn có COD bằng 0. Đơn COD được shipper thu thay mặt ĐVVC, chờ đối soát tiền chuyển về ở BPMN-03. |
+| End alternate | Đơn hết tồn hoặc QR hết hạn thì dừng trước khi giao. Nếu đã bàn giao và giao thất bại, chuyển BPMN-02. |
 | Data | Order (item subtotal, customer shipping charge, grand total), Reservation, Payment/COD Receivable, Shipment, OutboxEvent |
 | Requirement | FR-01, FR-02, FR-03, FR-04; EXT-01; NFR-03, NFR-04 |
 
@@ -55,25 +55,40 @@ flowchart LR
     S4 -. timer hết hạn .-> S7[Expire intent; release reservation]
     S3 --> S6
     S6 --> S8[Pick & pack] --> S9[Commit stock / tạo shipment] --> S10[Outbox tạo vận đơn: COD=grand total; QR=0]
-    S11[Nhận tracking code] --> Se((Kết thúc))
+    S11[Nhận mã vận đơn] --> S12[Chờ kết quả giao]
+    S13[Ghi nhận đã giao và số COD ĐVVC báo thu] --> Se((Đã giao))
+    S14[Ghi nhận giao thất bại] --> Sf((Sang BPMN-02))
   end
   subgraph P[Pool: Ngân hàng/Đơn vị cung cấp QR]
-    P1[Tạo, hiển thị và quản lý QR] --> P2[Callback có chữ ký + external_ref]
+    P1[Tạo và quản lý mã QR]
+    P3[Xử lý thanh toán] --> P2[Callback có chữ ký và mã tham chiếu]
   end
   subgraph L[Pool: ĐVVC]
-    L1[Nhận yêu cầu tạo vận đơn] --> L2[Trả tracking code]
+    L1[Nhận yêu cầu tạo vận đơn] --> L2[Trả mã vận đơn] --> L3[Bàn giao cho shipper đi giao]
+    L3 --> L4{Giao thành công?}
+    L4 -- Không --> L5[Báo lần giao thất bại]
+    L4 -- Có --> L6{Vận đơn có COD?}
+    L6 -- Có --> L7[Shipper thu đúng COD thay mặt ĐVVC] --> L8[ĐVVC ghi nhận khoản đã thu]
+    L6 -- Không --> L9[Báo đã giao, không thu thêm]
+    L8 --> L10[Báo đã giao và số COD đã thu]
   end
   C2 -. Order message .-> S1
   S4 -. Create intent request .-> P1
   P1 -. QR payload .-> S4a
   S4a -. Hiển thị QR .-> C8
-  C8 -. Payment request .-> P1
+  C8 -. Yêu cầu thanh toán .-> P3
   P2 -. Payment callback .-> S5
   Sx -. Out-of-stock .-> C9
   S7 -. Payment expired .-> C9
   S10 -. Create shipment .-> L1
   L2 -. Shipment response .-> S11
-  S11 -. Confirmation .-> C9
+  S11 -. Gửi mã vận đơn .-> C9
+  L7 -. Thu tiền khi giao .-> C10[Khách trả đúng số COD trên vận đơn]
+  L10 -. Kết quả giao và thu hộ .-> S13
+  L9 -. Kết quả giao QR .-> S13
+  L5 -. Lý do giao thất bại .-> S14
+  S12 --> S13
+  S12 --> S14
 ```
 
 ### 1.3 Gateway/event bắt buộc khi vẽ BPMN
@@ -131,9 +146,12 @@ flowchart TD
   C3 --> G4{Nguồn và yêu cầu?}
   C4 --> G4
   G4 -- QR chưa giao/RTO hoặc trả hàng --> D1[Tạo refund theo approval]
-  G4 -- COD đã thu, trả hàng --> D2[Tạo nghĩa vụ hoàn tiền thủ công/chuyển khoản]
+  G4 -- COD đã thu, trả hàng --> D2[Tạo nghĩa vụ hoàn tiền]
   G4 -- Đổi hàng --> D3[Reserve SKU thay thế + tạo shipment mới]
-  G4 -- COD chưa thu/RTO --> D4[Đóng COD expected = uncollected]
+  G4 -- COD chuyển hoàn --> D9{Xác nhận chưa thu tiền?}
+  D9 -- Có --> D4[Ghi UNCOLLECTED và loại khỏi khoản phải chuyển]
+  D9 -- Đã thu hoặc chưa rõ --> D10[Chuyển kế toán xác minh COD]
+  D10 --> Ef((Chờ xử lý COD))
   D1 --> D5[Nhận refund callback]
   D2 --> D6[Record payout reference]
   D3 --> D7[Link replacement order]
@@ -151,6 +169,7 @@ flowchart TD
 - Chỉ restock sau khi scan đúng tracking/RMA và QC pass. QC fail vào quarantine, không tăng available-to-promise.
 - Refund là một payment transaction mới tham chiếu giao dịch gốc, không sửa/xóa payment entry cũ.
 - Message/callback lặp từ ĐVVC/Đơn vị QR phải bị khử trùng theo external event ID.
+- Đơn COD chuyển hoàn được ghi `UNCOLLECTED` khi xác nhận chưa thu tiền. Nếu ĐVVC báo đã thu hoặc thông tin chưa rõ, chuyển kế toán xác minh và giữ nguyên chứng từ để đối soát.
 
 ## 3. BPMN-03 — Đối soát COD/QR và xử lý chênh lệch
 
@@ -162,11 +181,11 @@ Kế toán không nên chỉ tin một file do đối tác gửi. Với COD, cu�
 
 | Thuộc tính | Nội dung |
 |---|---|
-| Trigger | Cuối kỳ tháng nhận COD statement/remittance, QR statement/bank credit hoặc carrier service invoice |
+| Trigger | Nhận bảng kê COD cuối tháng, hồ sơ đối soát QR hoặc hóa đơn phí ĐVVC. Sao kê ngân hàng được bổ sung khi có giao dịch chuyển tiền. |
 | Pool | ĐVVC; Ngân hàng/Đơn vị cung cấp thanh toán QR; Ngân hàng; SME O2C |
 | Lane SME | Import/Validation; Matching Engine; Accountant; Reporting |
 | Pre-condition | Expected ledger đã có order_id, external_ref, amount và payment method |
-| End success | Batch closed; các dòng matched hoặc có case có owner/SLA |
+| End success | Kỳ COD đóng khi đã khớp đủ ba nguồn. Hồ sơ thiếu chứng từ hoặc chưa khớp tiếp tục mở, có người phụ trách và thời hạn xử lý. |
 | Data | CODStatement, CODRemittance, QRStatement, PaymentEntry, Shipment, CarrierInvoice, ShopPayment, ReconciliationCase |
 | Requirement | FR-08, FR-09, FR-10, FR-11; REQ-COD-02; EXT-03; NFR-06, NFR-08 |
 
@@ -179,11 +198,13 @@ flowchart LR
   X2 --> G0{Hợp lệ?}
   G0 -- Không --> X3[Reject/quarantine file + thông báo] --> Xe((Kết thúc lỗi))
   G0 -- Có --> Gt{Loại hồ sơ?}
-  Gt -- COD --> C1[So sơ bộ expected ↔ carrier collected]
+  Gt -- COD --> C6[ĐVVC gửi bảng kê các khoản shipper đã thu hộ]
+  C6 --> C1[Shop so số COD phải thu đủ điều kiện với bảng kê]
   C1 --> C2{Sơ bộ khớp?}
-  C2 -- Có --> C3[Xác nhận bảng kê; chờ gross remittance]
-  C3 --> C4[Nhận bank credit]
-  C4 --> X5[Final 3-way match]
+  C2 -- Có --> C3[Shop xác nhận bảng kê kỳ tháng]
+  C3 --> C5[ĐVVC chuyển COD còn phải chuyển vào tài khoản shop]
+  C5 --> C4[Shop kiểm tra sao kê theo mã kỳ hoặc mã chuyển khoản]
+  C4 --> X5[Đối chiếu ba nguồn và kiểm tra hạn chuyển]
   C2 -- Không --> X7
   Gt -- QR --> Q1[Match ledger ↔ QR statement ↔ bank credit]
   Q1 --> X5
@@ -192,8 +213,9 @@ flowchart LR
   F2 -- Có --> F3[Phê duyệt và shop thanh toán riêng]
   F2 -- Không --> X7[Tạo ReconciliationCase]
   X5 --> G1{Kết quả?}
-  G1 -- Exact match --> X6[Post collected/paid/remitted entries]
-  G1 -- Partial/missing/duplicate/unknown --> X7[Tạo ReconciliationCase]
+  G1 -- Khớp --> X6[Ghi nhận tiền thực nhận]
+  G1 -- Chưa đến hạn, tiền chưa về --> C4
+  G1 -- Lệch tiền hoặc thiếu chứng từ quá hạn --> X7[Tạo hồ sơ chênh lệch]
   X7 --> X8[Kế toán điều tra với chứng từ]
   X8 --> G2{Resolution?}
   G2 -- Đối tác sửa/chuyển bù --> X9[Ghi nhận remittance/credit bổ sung]
@@ -217,11 +239,11 @@ flowchart LR
 `Matching` nghĩa là tìm và ghép các dòng nói về cùng một giao dịch. Việc ghép phải ưu tiên mã giao dịch/mã vận đơn; không ghép chỉ vì hai dòng có cùng số tiền, vì nhiều đơn có thể trùng giá trị.
 
 1. Khóa ưu tiên: provider + external transaction/tracking reference; không match chỉ bằng số tiền.
-2. COD expected = tổng tiền đơn gồm phí vận chuyển thu khách; carrier statement = đúng số COD ĐVVC đã thu. Sau đối chiếu sơ bộ, bank remittance phải bằng toàn bộ COD phải chuyển; final match đủ ba nguồn mới đóng kỳ. Không trừ carrier fee trong ba số này.
+2. COD dự kiến của một đơn bằng tổng tiền đơn, gồm phí giao khách trả. Khi chốt kỳ, đối chiếu các đơn đủ điều kiện thu với bảng kê đã thu của ĐVVC. Đơn chuyển hoàn xác nhận chưa thu được ghi `UNCOLLECTED` và loại khỏi số phải chuyển. Ghép tiền vào tài khoản shop theo mã kỳ hoặc mã chuyển khoản và đối chiếu tổng kỳ với các dòng vận đơn. Hóa đơn phí ĐVVC được xử lý riêng.
 3. Hóa đơn phí ĐVVC được kiểm riêng theo shipment/tracking, biểu phí và phụ phí; shop thanh toán bằng một luồng tiền ra riêng. `CustomerShippingCharge` không phải `CarrierShippingExpense`.
 4. QR expected/paid/refund lấy từ Payment Ledger; bảng kê Đơn vị QR và tiền vào ngân hàng là hai nguồn độc lập. Giả định phí QR bằng 0.
 5. Tolerance prototype bằng 0 VND; mọi lệch tiền tạo case. Có thể cấu hình tolerance sau nếu nghiệp vụ phê duyệt.
-6. File trùng được nhận biết bằng provider + batch_id và hash; dòng trùng bằng provider + external_ref + entry_type.
+6. File trùng được nhận biết bằng provider + batch_id và hash, còn dòng trùng dùng provider + external_ref + entry_type. Khi chạy lại đối soát, dùng bảng kê và chuyển khoản đã ghi nhận. ĐVVC chỉ chuyển phần còn thiếu nếu cần chuyển bù.
 
 ## 4. Checklist chuẩn BPMN
 

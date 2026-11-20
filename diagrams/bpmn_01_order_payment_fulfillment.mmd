@@ -15,23 +15,38 @@ flowchart LR
     S4 -. timer hết hạn .-> S7[Expire intent; release reservation]
     S3 --> S6
     S6 --> S8[Pick & pack] --> S9[Commit stock / tạo shipment] --> S10[Outbox tạo vận đơn: COD=grand total; QR=0]
-    S11[Nhận tracking code] --> Se((Kết thúc))
+    S11[Nhận mã vận đơn] --> S12[Chờ kết quả giao]
+    S13[Ghi nhận đã giao và số COD ĐVVC báo thu] --> Se((Đã giao))
+    S14[Ghi nhận giao thất bại] --> Sf((Sang BPMN-02))
   end
   subgraph P[Pool: Ngân hàng/Đơn vị cung cấp QR]
-    P1[Tạo, hiển thị và quản lý QR] --> P2[Callback có chữ ký + external_ref]
+    P1[Tạo và quản lý mã QR]
+    P3[Xử lý thanh toán] --> P2[Callback có chữ ký và mã tham chiếu]
   end
   subgraph L[Pool: ĐVVC]
-    L1[Nhận yêu cầu tạo vận đơn] --> L2[Trả tracking code]
+    L1[Nhận yêu cầu tạo vận đơn] --> L2[Trả mã vận đơn] --> L3[Bàn giao cho shipper đi giao]
+    L3 --> L4{Giao thành công?}
+    L4 -- Không --> L5[Báo lần giao thất bại]
+    L4 -- Có --> L6{Vận đơn có COD?}
+    L6 -- Có --> L7[Shipper thu đúng COD thay mặt ĐVVC] --> L8[ĐVVC ghi nhận khoản đã thu]
+    L6 -- Không --> L9[Báo đã giao, không thu thêm]
+    L8 --> L10[Báo đã giao và số COD đã thu]
   end
   C2 -. Order message .-> S1
   S4 -. Create intent request .-> P1
   P1 -. QR payload .-> S4a
   S4a -. Hiển thị QR .-> C8
-  C8 -. Payment request .-> P1
+  C8 -. Yêu cầu thanh toán .-> P3
   P2 -. Payment callback .-> S5
   Sx -. Out-of-stock .-> C9
   S7 -. Payment expired .-> C9
   S10 -. Create shipment .-> L1
   L2 -. Shipment response .-> S11
-  S11 -. Confirmation .-> C9
+  S11 -. Gửi mã vận đơn .-> C9
+  L7 -. Thu tiền khi giao .-> C10[Khách trả đúng số COD trên vận đơn]
+  L10 -. Kết quả giao và thu hộ .-> S13
+  L9 -. Kết quả giao QR .-> S13
+  L5 -. Lý do giao thất bại .-> S14
+  S12 --> S13
+  S12 --> S14
 

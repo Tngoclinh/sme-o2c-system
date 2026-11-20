@@ -58,7 +58,7 @@ Mỗi dòng mô tả: ai/cái gì tạo ra tác động → hệ thống đang �
 | TC-02 Duplicate payment | Payment PENDING | Gửi cùng external_event_id 10 lần | 01 PAID entry; các lần sau 200/no-op; audit duplicate |
 | TC-03 Oversell | available=5 | 20 request song song mỗi request quantity=1 | Đúng 5 success; 15 conflict; balance invariant đúng |
 | TC-04 Outbox recovery | Carrier mock fail 3 lần | Worker retry | Lần 4 tạo đúng 01 shipment; không duplicate external order |
-| TC-05 COD gross và hóa đơn riêng | Expected/collected 500k; bank remittance 480k; carrier invoice 20k riêng | Run reconciliation | Case MISSING_REMITTANCE_20K; không lấy invoice bù vào COD; invoice được verify/pay ở luồng riêng |
+| TC-05 COD gross và hóa đơn riêng | Shipper thu hộ 500k đúng theo đơn. Bảng kê ĐVVC ghi 500k, sao kê tài khoản shop ghi 480k, hóa đơn phí riêng 20k | Run reconciliation | Case MISSING_REMITTANCE_20K; không lấy invoice bù vào COD; invoice được verify/pay ở luồng riêng |
 | TC-06 RTO duplicate | Shipment RETURNED | Scan cùng tracking hai lần | Một RETURN_TO_QC; sau QC pass một RESTOCK |
 | TC-07 Authorization | User role CS | POST adjustment | 403; security audit có user/action |
 | TC-08 Backup restore | Có backup demo | Restore vào DB sạch | Counts/checksum Order, StockEntry, PaymentEntry khớp |

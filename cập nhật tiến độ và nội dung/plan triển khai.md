@@ -14,7 +14,7 @@ Kế hoạch cũ đã có đúng chuỗi đầu ra lớn: TOGAF/ArchiMate → BP
 - Ngoài phạm vi: mua hàng từ nhà cung cấp, quản lý nhiều kho, khuyến mại phức tạp, sổ cái kế toán tổng hợp, tối ưu tuyến giao, marketplace đa người bán.
 - Mỗi yêu cầu dùng một ID ổn định và phải truy vết ít nhất qua: TOGAF → ArchiMate → BPMN/API → kiểm thử.
 - Quy mô 100–300 đơn/ngày, 01 website, 01 kho trung tâm và 01 ĐVVC theo tài liệu hướng dẫn II-B; tỷ lệ COD/giao thất bại nếu dùng chỉ là giả định kiểm thử, không trình bày như số liệu khảo sát.
-- Chính sách chốt: ĐVVC chuyển đủ COD đã thu sau đối soát tháng; hóa đơn phí vận chuyển được shop thanh toán riêng; QR fee giả định bằng 0; tác nhân QR gọi chung là `Ngân hàng/Đơn vị cung cấp thanh toán QR`.
+- Chính sách chốt: shipper thu hộ COD khi giao thành công, ĐVVC chuyển đủ tiền đã thu vào tài khoản shop sau đối chiếu bảng kê tháng; hóa đơn phí vận chuyển được shop thanh toán riêng; QR fee giả định bằng 0; tác nhân QR gọi chung là `Ngân hàng/Đơn vị cung cấp thanh toán QR`.
 
 ## 3. Kế hoạch đã hiệu chỉnh
 

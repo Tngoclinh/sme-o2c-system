@@ -122,17 +122,19 @@ Mỗi bên liên quan có một mối quan tâm khác nhau. Chủ shop quan tâm
 
 \begin{table}[H]
 \centering
-\caption{Stakeholder và concern}
+\caption{Bên liên quan, vai trò và mối quan tâm}
 \begin{tabularx}{\textwidth}{p{0.22\textwidth}YY}
 \toprule
-\textbf{Stakeholder} & \textbf{Concern} & \textbf{Đầu ra trả lời}\\
+\textbf{Bên liên quan} & \textbf{Vai trò/chức năng} & \textbf{Mối quan tâm chính}\\
 \midrule
-Chủ doanh nghiệp & Chi phí, tiền về, thất bại/hoàn & Vision, KPI, roadmap, dashboard\\
-Khách hàng & Đơn đúng, trả tiền an toàn, đổi trả rõ & BPMN-01/02, order timeline\\
-Kho & Reservation, xuất/nhập/QC không trùng & Inventory ledger, BPMN-01/02\\
-Kế toán & COD/QR, phí, refund, discrepancy & BPMN-03, reconciliation view\\
-IT & Bảo mật, phục hồi, vận hành đơn giản & Technology view, ADR, risk\\
-Carrier/Đơn vị QR & Contract, callback, reference, bảng kê/hóa đơn & Adapters và message flows\\
+Chủ doanh nghiệp & Quyết định đầu tư, phê duyệt chính sách và theo dõi hoạt động & Chi phí, doanh thu và dòng tiền\\
+Khách hàng & Đặt hàng, thanh toán, nhận hàng và yêu cầu đổi/trả & Thanh toán an toàn, dễ theo dõi đơn\\
+Nhân viên bán hàng/CSKH & Kiểm tra thông tin, hỗ trợ tra cứu đơn và phối hợp giao lại & Thông tin chính xác, hỗ trợ khách kịp thời\\
+Nhân viên kho & Đóng gói, bàn giao, nhận và kiểm hàng hoàn & Tồn chính xác, tránh nhập/xuất trùng\\
+Nhân viên kế toán & Đối soát, theo dõi chênh lệch và thanh toán hóa đơn đã duyệt & Dòng tiền, công nợ và chứng từ đầy đủ\\
+Đơn vị vận chuyển & Giao hàng, thu hộ qua shipper, chuyển COD vào tài khoản shop và xuất hóa đơn phí riêng & Thông tin vận đơn chính xác, đối soát đúng kỳ\\
+Ngân hàng/Đơn vị cung cấp thanh toán QR & Quản lý giao dịch QR, gửi kết quả và xử lý hoàn tiền theo yêu cầu & Số tiền và mã tham chiếu chính xác\\
+Bộ phận IT/vận hành hệ thống & Duy trì tích hợp, giám sát, phân quyền và sao lưu & Bảo mật, phục hồi và bảo trì\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -206,19 +208,15 @@ NFR-08 & Toàn vẹn tài chính & Tiền khách trả, COD gross remittance và
 \end{longtable}
 
 \section{Hiện trạng--Kiến trúc đích--Khoảng thiếu và Lộ trình}
-Bảng được đọc từ trái sang phải: doanh nghiệp đang làm thế nào; muốn đạt cách làm nào; còn thiếu gì; và phần thiếu được giao cho gói công việc nào.
-\begin{longtable}{p{0.16\textwidth}p{0.24\textwidth}p{0.27\textwidth}p{0.23\textwidth}}
+Bảng tóm tắt đối chiếu hiện trạng giả định và kiến trúc đích theo bốn miền ADM. Các mã khoảng thiếu dùng chung với mục 5 của tài liệu TOGAF.
+\begin{longtable}{p{0.14\textwidth}p{0.23\textwidth}p{0.27\textwidth}p{0.24\textwidth}}
 \toprule
-\textbf{Miền} & \textbf{Baseline} & \textbf{Target} & \textbf{Gap/WP}\\
+\textbf{Miền} & \textbf{Hiện trạng} & \textbf{Kiến trúc đích} & \textbf{Khoảng thiếu}\\
 \midrule\endhead
-Order & Web xuất file & OMS lifecycle/correlation & WP-01, WP-02\\
-Inventory & Bảng tính/trừ lùi & Reservation + ledger + QC & WP-01--03\\
-COD & Dò statement cuối kỳ & Gross ledger + 3-way match theo tháng & WP-04\\
-QR & Transfer khó gắn đơn & Intent/reference/callback/refund qua Đơn vị QR & WP-02, WP-04\\
-Phí carrier & Có thể trộn với COD & Invoice riêng, verify/pay riêng, không net-off & WP-04, WP-05\\
-Shipping & Theo dõi tay & API, signed webhook, RTO & WP-03\\
-Return & Chat rời rạc & RMA, QC, disposition & WP-03\\
-Technology & File/máy cá nhân & Monolith, PostgreSQL, audit/backup & WP-01, WP-05\\
+Nghiệp vụ (B) & Chép đơn, ghi tồn bằng Excel, tra cứu giao thủ công và dò bảng kê cuối tháng & Luồng bàn giao đơn, giữ hàng, xử lý giao lại, kiểm hàng hoàn và đối soát tiền thực nhận & GAP-B01--B04. Thiếu luồng bàn giao, quy tắc tồn, xử lý hàng hoàn và quy trình đối soát.\\
+Dữ liệu (C) & Mã đơn, vận đơn và chứng từ rải rác & Mã liên kết, trạng thái riêng và lịch sử biến động tồn, tiền & GAP-D01--D02. Thiếu định danh, liên kết và dữ liệu truy vết.\\
+Ứng dụng (C) & Website nhận đơn, các bước sau xử lý thủ công & OMS, phân hệ kho, vận chuyển, đổi/trả, tích hợp QR, đối soát và báo cáo & GAP-A01--A03. Thiếu tích hợp giữa các bước và xử lý sự kiện, chứng từ tập trung.\\
+Công nghệ (D) & Hồ sơ trên máy cá nhân và ứng dụng nhắn tin & Hạ tầng tập trung, kiểm soát truy cập, ghi nhật ký, giám sát và sao lưu & GAP-T01. Thiếu môi trường vận hành và kiểm soát khôi phục tập trung.\\
 \bottomrule
 \end{longtable}
 
@@ -283,15 +281,15 @@ Baseline, ba giai đoạn và Target được hiện thực bởi WP-01--05. Wor
 BPMN là lưu đồ quy trình có quy tắc. Pool là một tổ chức độc lập; lane là vai trò bên trong tổ chức; task là việc cần làm; event là điều đã xảy ra; gateway là điểm rẽ nhánh; message flow là thông điệp giữa các tổ chức.
 
 \section{BPMN-01: Order--Payment--Fulfillment}
-Trigger là customer submit order. SME tính grand total bằng tiền hàng sau giảm giá cộng phí giao khách trả rồi atomic reserve. Với COD, expected receivable và shipment COD amount đều bằng grand total. Với QR, Ngân hàng/Đơn vị cung cấp thanh toán QR tạo intent đúng grand total, QR fee bằng 0; sau callback hợp lệ hệ thống tạo shipment có COD amount bằng 0. Timer hết hạn làm expire và release reservation.
+Trigger là customer submit order. SME tính grand total bằng tiền hàng sau giảm giá cộng phí giao khách trả rồi atomic reserve. Với COD, số dự kiến phải thu và số COD trên vận đơn đều bằng tổng tiền đơn. Khi giao thành công, shipper thu đúng số này từ khách thay mặt ĐVVC. ĐVVC ghi nhận số đã thu theo mã vận đơn để lập bảng kê cuối tháng. Với QR, Ngân hàng/Đơn vị cung cấp thanh toán QR tạo intent đúng grand total, QR fee bằng 0; sau callback hợp lệ hệ thống tạo shipment có COD amount bằng 0. Timer hết hạn làm expire và release reservation.
 
 Ký pháp bắt buộc: XOR cho tồn/phương thức; intermediate message catch cho payment; interrupting timer boundary cho QR timeout; message flow giữa Customer--SME--Đơn vị QR--Carrier; không dùng sequence flow xuyên pool.
 
 \section{BPMN-02: Delivery Failure, RTO và Return/Exchange}
-Hai trigger được tách: carrier gửi delivery failure trước khi delivered; hoặc customer tạo return/exchange sau delivered. Nếu còn lượt giao và khách đồng ý, đặt lịch retry; nếu không, shipment RETURNING. Return request phải qua eligibility rồi tạo RMA. Khi kiện về, kho scan tracking/RMA, nhận vào QC; pass thì RESTOCK, fail thì QUARANTINE. QR/RTO hoặc return tạo refund; COD đã thu tạo payout obligation; exchange reserve SKU thay thế; COD chưa thu đóng expected là uncollected.
+Hai trigger được tách: carrier gửi delivery failure trước khi delivered; hoặc customer tạo return/exchange sau delivered. Nếu còn lượt giao và khách đồng ý, đặt lịch retry; nếu không, shipment RETURNING. Return request phải qua eligibility rồi tạo RMA. Khi kiện về, kho scan tracking/RMA, nhận vào QC; pass thì RESTOCK, fail thì QUARANTINE. QR/RTO hoặc return tạo refund; COD đã thu tạo payout obligation; exchange reserve SKU thay thế; đơn COD chuyển hoàn chỉ ghi UNCOLLECTED khi xác nhận chưa thu tiền. Nếu thông tin thu tiền chưa rõ hoặc đã báo thu, kế toán xác minh trước khi chốt.
 
 \section{BPMN-03: Reconciliation}
-Cuối tháng carrier gửi COD statement; shop so sơ bộ expected--collected và xử lý mismatch, sau đó carrier remittance đủ gross. Bank credit hoàn thành đối soát ba chiều và đóng kỳ. CarrierInvoice được kiểm riêng theo shipment/tracking và biểu phí rồi shop thanh toán riêng, không net-off COD. QR được match Payment Ledger--bảng kê Đơn vị QR--ngân hàng với fee bằng 0. Mismatch tạo ReconciliationCase.
+Cuối tháng, ĐVVC gửi bảng kê tiền shipper đã thu hộ. Shop đối chiếu số phải thu theo đơn với bảng kê rồi ĐVVC chuyển đủ tiền đã thu vào tài khoản ngân hàng của shop. Kế toán xác nhận tiền vào qua sao kê. Kỳ chỉ đóng sau khi ba nguồn khớp. Đơn chuyển hoàn xác nhận chưa thu được loại khỏi số phải chuyển. CarrierInvoice được kiểm riêng theo shipment/tracking và biểu phí rồi shop thanh toán riêng, không net-off COD. QR được match Payment Ledger--bảng kê Đơn vị QR--ngân hàng với fee bằng 0. Mismatch tạo ReconciliationCase.
 
 \chapter{Architecture Decision Records}
 
@@ -309,7 +307,7 @@ Chọn PostgreSQL transaction/compare-and-update, unique order--SKU reservation 
 Domain change và OutboxEvent commit cùng transaction. Worker retry exponential. Callback ghi InboxEvent unique theo provider/external event ID sau xác thực signature/token/timestamp. Sự kiện lỗi quá ngưỡng vào manual queue. Đổi lại, hệ thống chấp nhận eventual consistency.
 
 \section{ADR-04: COD gross và carrier invoice tách riêng}
-Chọn Payment Ledger chứa EXPECTED, COLLECTED/PAID, REMITTED, REFUND và ADJUSTMENT. COD đối soát gross theo tháng; CarrierInvoice không nằm trong ledger này mà được kiểm và shop thanh toán riêng. QR intent bằng grand total, QR fee bằng 0 và shipment COD bằng 0. Invariant là COD expected = collected = remitted + discrepancy; carrier invoice không được dùng bù vào phương trình này.
+Chọn Payment Ledger chứa EXPECTED, COLLECTED/PAID, REMITTED, REFUND và ADJUSTMENT. COD đối soát gross theo tháng; CarrierInvoice không nằm trong ledger này mà được kiểm và shop thanh toán riêng. QR intent bằng grand total, QR fee bằng 0 và shipment COD bằng 0. Kỳ COD khớp khi số phải thu đủ điều kiện, số ĐVVC báo đã thu và số thực nhận qua ngân hàng bằng nhau. Kiểm tra riêng chênh lệch thu và chênh lệch chuyển. Hóa đơn vận chuyển được thanh toán riêng.
 
 \chapter{Kiểm chứng}
 

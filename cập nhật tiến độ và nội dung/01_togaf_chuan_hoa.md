@@ -84,7 +84,7 @@ Các quy tắc kỹ thuật bổ sung để hiện thực nguyên tắc trên: A
 
 - `Tiền khách phải trả = tiền hàng sau giảm giá + phí vận chuyển thu của khách`. Phí vận chuyển hiển thị ở checkout và nằm trong tổng đơn.
 - Shop cấu hình phí vận chuyển thu khách ít nhất bằng chi phí vận chuyển ước tính, có thể cộng một mức đệm nhỏ để hạn chế phải bù; đây là chính sách giá của shop, không phải phí do ĐVVC tự cộng khi giao.
-- Với COD, hệ thống gửi `COD amount` đúng bằng tổng tiền đơn. Cuối tháng ĐVVC lập bảng kê số đã thu; shop/ĐVVC đối chiếu sơ bộ với COD theo đơn, xử lý điểm chưa khớp rồi ĐVVC chuyển **toàn bộ tiền COD đã thu**. Tiền vào ngân hàng là nguồn thứ ba để shop kiểm tra và đóng kỳ.
+- Với COD, hệ thống gửi `COD amount` đúng bằng tổng tiền đơn. Khi giao thành công, shipper thu đúng số tiền này từ khách thay mặt ĐVVC. Cuối tháng ĐVVC lập bảng kê số đã thu; shop/ĐVVC đối chiếu sơ bộ với COD theo đơn, xử lý điểm chưa khớp rồi ĐVVC chuyển **toàn bộ tiền COD đã thu**. Tiền vào ngân hàng là nguồn thứ ba để shop kiểm tra và đóng kỳ.
 - Với QR, Ngân hàng/Đơn vị cung cấp thanh toán QR tạo Payment Intent bằng đúng tổng tiền đơn, gồm cả phí vận chuyển thu khách. ĐVVC nhận vận đơn có `COD amount = 0` và không thu thêm tiền tại cửa.
 - Giả định bài tập: Đơn vị QR không thu phí. Phí dịch vụ vận chuyển không được khấu trừ vào tiền COD; cuối tháng ĐVVC xuất hóa đơn phí riêng và shop thanh toán riêng.
 - Vì vậy phải tách `Customer Shipping Charge` (khoản khách trả trong đơn) với `Carrier Shipping Expense/Invoice` (chi phí shop phải trả ĐVVC). Không dùng phí vận chuyển để làm giảm trạng thái `PAID` của khách.
@@ -145,20 +145,39 @@ Các thuộc tính chất lượng tham chiếu ISO/IEC 25010:2023; giá trị n
 
 ## 5. Hiện trạng, kiến trúc đích và khoảng thiếu (Baseline, Target, Gap)
 
-Bảng này đọc từ trái sang phải: doanh nghiệp đang làm thế nào → muốn làm thế nào → còn thiếu thành phần nào → giao phần thiếu đó cho gói công việc nào.
+Theo TOGAF ADM, mô tả hiện trạng và kiến trúc đích theo cùng phạm vi rồi đối chiếu các cấu phần tương ứng. Pha B xét nghiệp vụ, pha C xét dữ liệu và ứng dụng, pha D xét công nghệ. Kỹ thuật Gap Analysis xét cả cấu phần được giữ lại, cấu phần có ở đích nhưng thiếu ở hiện trạng và cấu phần hiện có vắng mặt ở đích. Với cấu phần vắng mặt ở đích, cần xác định đó là chủ đích loại bỏ hay một thiếu sót của thiết kế. Các bảng bên dưới tóm tắt kết quả đối chiếu cho phạm vi bài tập lớn. [The Open Group — TOGAF 10th Edition, A Pocket Guide, mục 5.3.2 và 6.2.3–6.2.5](https://studylib.net/doc/28508170/togaf10--1-)
 
-| Miền | Baseline | Target | Gap | Work package |
+Baseline dưới đây là kịch bản SME giả định của đề tài. Target mô tả cách vận hành và các cấu phần cần có. Cột Gap ghi chênh lệch giữa hai trạng thái. Cột WP chỉ ra gói công việc xử lý từng phần của khoảng thiếu. Xem phạm vi bàn giao và thứ tự thực hiện ở mục 7.
+
+### 5.1 Nghiệp vụ (Business Architecture — pha B)
+
+| Khía cạnh | Hiện trạng (Baseline) | Kiến trúc đích (Target) | Khoảng thiếu (Gap) | Gói công việc xử lý (WP) |
 |---|---|---|---|---|
-| Business | Excel/Zalo, xử lý ngoại lệ tùy người | Quy trình chuẩn order–pay–ship–return–reconcile | Thiếu ownership, SLA và state model | WP-01, WP-03 |
-| Order | Đơn web xuất file | OMS là nguồn sự thật của Order | Thiếu lifecycle và correlation | WP-01, WP-02 |
-| Inventory | Trừ lùi bảng tính | Reservation + append-only ledger + QC/quarantine | Dễ oversell, nhập hoàn trùng | WP-01, WP-02, WP-03 |
-| COD | Dò bảng kê cuối kỳ | COD ledger + đối soát ba chiều theo tháng; nhận đủ COD gross | Không biết expected/collected/remitted/disputed | WP-04 |
-| QR | Chuyển khoản khó gắn đơn | QR intent/reference/callback/refund/reconciliation qua Đơn vị QR | Thiếu adapter và settlement model | WP-02, WP-04 |
-| Phí ĐVVC | Có thể bị trộn vào tiền COD | Hóa đơn phí vận chuyển riêng; shop kiểm tra và thanh toán riêng, không net-off COD | Chưa tách customer charge và carrier expense | WP-04, WP-05 |
-| Shipping | Theo dõi thủ công | API + signed/idempotent webhook + RTO | Thiếu mapping và retry | WP-03 |
-| Return/Exchange | Chat rời rạc | RMA + eligibility + QC + disposition + refund/exchange | Không truy vết reverse flow | WP-03 |
-| Data | Trạng thái trộn lẫn | State machine riêng và ID xuyên suốt | Không có canonical model | WP-01 |
-| Technology | File/máy cá nhân | Web app modular monolith, PostgreSQL, object storage, audit/monitoring | Thiếu bảo mật, backup, observability | WP-01, WP-05 |
+| Tiếp nhận và xử lý đơn | Khách đặt qua website. Nhân viên xuất Excel hoặc chép thông tin qua Zalo để chuyển đơn sang khâu xử lý. | Giữ kênh đặt hàng qua website. Đơn được chuyển thẳng vào luồng kiểm tra, xác nhận và bàn giao cho kho, với trạng thái theo dõi xuyên suốt. | **GAP-B01.** Thiếu luồng bàn giao đơn thống nhất giữa website và vận hành. Bỏ bước chép lại đơn khỏi quy trình thường ngày. | WP-02 |
+| Giữ hàng và xử lý tồn | Kho ghi sổ hoặc trừ tồn trên Excel. Hàng đang giao và hàng đang hoàn khó theo dõi. | Giữ hàng khi xác nhận đơn. Giải phóng phần giữ chỗ nếu hủy trước xuất kho. Hàng quay về chỉ được cộng vào tồn khả dụng sau khi kho thực nhận và kiểm tra đạt. | **GAP-B02.** Thiếu quy tắc giữ, giải phóng và nhập lại hàng theo từng mốc nghiệp vụ. | WP-02 (giữ và giải phóng hàng) / WP-03 (nhập lại hàng hoàn) |
+| Giao hàng và đổi/trả | Nhân viên tra cứu trạng thái giao thủ công. Kiện chuyển hoàn được kiểm đếm tại kho. Yêu cầu đổi/trả sau giao trao đổi qua tin nhắn. | Theo dõi từng lần giao và lý do thất bại. Xử lý giao lại hoặc chuyển hoàn theo chính sách. Kho nhận và kiểm hàng hoàn. Yêu cầu đổi/trả sau giao có hồ sơ riêng. | **GAP-B03.** Thiếu quy trình theo dõi từ lần giao thất bại hoặc yêu cầu đổi/trả đến khi nhận hàng, kiểm hàng và chốt hướng xử lý. | WP-03 |
+| Thanh toán và đối soát | Kế toán dò bảng kê COD cuối tháng theo mã vận đơn. Giao dịch chuyển khoản khó gắn với đơn và hồ sơ lệch tiền khó tra cứu. | COD cuối tháng đối chiếu số phải thu, số ĐVVC báo đã thu và tiền thực chuyển. Hóa đơn phí ĐVVC được kiểm và thanh toán riêng. Với QR, xác nhận và đối soát giao dịch theo mã tham chiếu. Mỗi khoản lệch có người phụ trách và trạng thái xử lý. | **GAP-B04.** Thiếu quy trình đối chiếu COD đến bước xác nhận tiền vào ngân hàng, theo dõi trách nhiệm xử lý lệch và kiểm hóa đơn phí riêng. Thiếu luồng xác nhận và đối soát QR theo đơn. | WP-02 (xác nhận QR theo đơn) / WP-04 (đối soát COD/QR, xử lý lệch và hóa đơn phí) |
+
+### 5.2 Dữ liệu (Data Architecture — pha C)
+
+| Khía cạnh | Hiện trạng (Baseline) | Kiến trúc đích (Target) | Khoảng thiếu (Gap) | Gói công việc xử lý (WP) |
+|---|---|---|---|---|
+| Định danh, trạng thái và lịch sử | Mã đơn, vận đơn và chứng từ nằm rải rác. Trạng thái và lịch sử xử lý nằm trong file hoặc tin nhắn. | Mã đơn liên kết được với vận đơn, giao dịch và hồ sơ đổi/trả. Đơn, tồn, vận chuyển và thanh toán có trạng thái riêng. Thay đổi quan trọng có nguồn, thời điểm và người thực hiện. | **GAP-D01.** Thiếu quy ước định danh, liên kết dữ liệu, mô hình trạng thái riêng và lịch sử thay đổi có thể tra cứu. | WP-01 |
+| Dữ liệu tồn kho và tài chính | Số tồn chủ yếu là số dư bảng tính. Số tiền theo đơn, bảng kê, sao kê và hóa đơn nằm ở các nguồn riêng. | Lưu giữ chỗ và từng biến động tồn. Phân biệt phí giao thu khách, khoản COD phải thu, số đã thu, số đã chuyển, giao dịch QR và hóa đơn phí ĐVVC. Liên kết được mỗi khoản với chứng từ tương ứng. | **GAP-D02.** Thiếu bản ghi chi tiết để giải thích biến động tồn, đối chiếu từng khoản tiền và phân biệt tiền khách trả với chi phí shop trả. | WP-02 (giữ chỗ và biến động tồn) / WP-03 (biến động hàng hoàn) / WP-04 (sổ tiền và chứng từ) |
+
+### 5.3 Ứng dụng (Application Architecture — pha C)
+
+| Khía cạnh | Hiện trạng (Baseline) | Kiến trúc đích (Target) | Khoảng thiếu (Gap) | Gói công việc xử lý (WP) |
+|---|---|---|---|---|
+| Đơn hàng và tồn kho | Website tiếp nhận đơn. Bảng tính và tin nhắn hỗ trợ xử lý tiếp theo. | Website chuyển đơn vào OMS. OMS phối hợp với phân hệ kho để kiểm tra, giữ và giải phóng hàng. Nhân viên tra cứu đơn trên giao diện quản trị. | **GAP-A01.** Thiếu kết nối website–OMS và chức năng phối hợp xử lý đơn với tồn kho. | WP-02 |
+| Vận chuyển và hàng hoàn | Trạng thái giao được tra cứu thủ công. Kho ghi nhận kiện hoàn bằng thao tác rời rạc. | Phân hệ vận chuyển tạo vận đơn, nhận sự kiện từ ĐVVC và phục hồi khi tích hợp lỗi. Phân hệ đổi/trả liên kết kiện hoàn với hồ sơ kiểm hàng và cập nhật tồn một lần. | **GAP-A02.** Thiếu tích hợp ĐVVC, chuẩn hóa trạng thái, xử lý thông báo lặp và liên kết hồ sơ nhận hoàn với tồn kho. | WP-03 |
+| QR, đối soát và báo cáo | Kế toán kiểm chuyển khoản hoặc ghép bảng kê thủ công. | Tích hợp Đơn vị QR để tạo mã và nhận kết quả đã xác thực. Phân hệ đối soát nhập bảng kê, ghép chứng từ với khoản tiền, tạo hồ sơ lệch và tổng hợp báo cáo giao thất bại, hàng hoàn, COD phải thu. | **GAP-A03.** Thiếu tích hợp xác nhận QR theo đơn và chức năng đối soát, xử lý lệch, báo cáo tập trung. | WP-02 (tích hợp QR) / WP-04 (đối soát và xử lý lệch) / WP-05 (báo cáo) |
+
+### 5.4 Công nghệ (Technology Architecture — pha D)
+
+| Khía cạnh | Hiện trạng (Baseline) | Kiến trúc đích (Target) | Khoảng thiếu (Gap) | Gói công việc xử lý (WP) |
+|---|---|---|---|---|
+| Hạ tầng và bảo vệ dữ liệu | Website nhận đơn, còn hồ sơ vận hành nằm trên máy cá nhân và trong ứng dụng nhắn tin. Theo giả định của bài, các hồ sơ này chưa có cơ chế kiểm soát và khôi phục tập trung. | Hạ tầng chạy ứng dụng và cơ sở dữ liệu tập trung, bảo vệ kết nối bằng HTTPS, giới hạn truy cập theo vai trò, ghi nhật ký, giám sát vận hành và sao lưu có kiểm tra khôi phục. | **GAP-T01.** Thiếu môi trường vận hành tập trung và các kiểm soát nhất quán về truy cập, truyền dữ liệu, nhật ký, giám sát và khôi phục. | WP-01 (hạ tầng và kiểm soát nền) / WP-05 (giám sát, sao lưu và kiểm tra khôi phục) |
 
 ## 6. Target Architecture tóm tắt
 
@@ -169,15 +188,15 @@ Bảng này đọc từ trái sang phải: doanh nghiệp đang làm thế nào 
 
 ## 7. Lộ trình triển khai (Roadmap)
 
-Không nên xây mọi thứ cùng lúc. Nhóm làm nền tảng và dữ liệu đơn–tồn trước, sau đó mới tích hợp thanh toán/vận chuyển, rồi mới đối soát và xử lý đổi trả. Thứ tự này giảm việc phải sửa lại các phần đã làm.
+Mỗi Plateau mô tả trạng thái vận hành đạt được sau khi hoàn thành các gói công việc của mốc đó. Lộ trình đi từ nền tảng và xử lý đơn–tồn đến giao hàng, xử lý hàng hoàn và chốt đối soát.
 
-| Plateau | Work package | Khả năng đạt được | Phụ thuộc |
+| Plateau | Work package | Phạm vi và kết quả bàn giao | Phụ thuộc |
 |---|---|---|---|
-| Giai đoạn 1 — Chuẩn hóa nền | WP-01 Chuẩn hóa dữ liệu và trạng thái | Mã dùng chung, state model, RBAC, audit/correlation, nền tảng DB | Không |
-| Giai đoạn 1 — Đơn và tồn | WP-02 Order + Inventory | Order, reservation, stock ledger, fulfillment cơ bản, QR/COD selection | WP-01 |
-| Giai đoạn 2 — Giao và hoàn | WP-03 Shipping + Returns | Adapter ĐVVC, webhook/outbox, giao thất bại, RTO, nhận hoàn/QC, đổi trả | WP-01, WP-02 |
-| Giai đoạn 3 — Đối soát | WP-04 COD Reconciliation | COD ledger, bảng kê/remittance tháng, đối soát ba chiều, case; hóa đơn ĐVVC tách riêng; mở rộng đối soát QR | WP-02, WP-03 |
-| Giai đoạn 3 — Kiểm soát | WP-05 Reporting & Operational Controls | Báo cáo, cảnh báo, backup/restore, monitoring, performance/security test và pilot | WP-04 |
+| 1 — Đơn và tồn vận hành trên nền tảng chung | WP-01 — Chuẩn hóa dữ liệu và trạng thái | Chuẩn hóa mã liên kết đơn, vận đơn, giao dịch và hồ sơ đổi/trả. Định nghĩa trạng thái từng loại, thông tin cần ghi trong lịch sử và thiết lập môi trường ứng dụng, cơ sở dữ liệu, HTTPS, phân quyền và nhật ký nền. | — |
+| 1 — Đơn và tồn vận hành trên nền tảng chung | WP-02 — Quản lý đơn, tồn kho và thanh toán tại checkout | Kết nối website với OMS và phân hệ kho. Cho phép tra cứu đơn, giữ hàng, giải phóng giữ chỗ và ghi biến động tồn. Ghi số COD phải thu theo đơn. Tích hợp tạo QR và xác nhận kết quả thanh toán theo mã tham chiếu. | WP-01 |
+| 2 — Theo dõi giao hàng và xử lý hàng hoàn | WP-03 — Vận chuyển và đổi/trả | Tạo vận đơn và nhận trạng thái từ ĐVVC, có xử lý sự kiện lặp và lỗi tích hợp. Theo dõi giao lại hoặc chuyển hoàn, tiếp nhận hồ sơ đổi/trả, kiểm hàng và cập nhật biến động tồn hàng hoàn đúng một lần. | WP-02 |
+| 3 — Đối soát và kiểm soát vận hành | WP-04 — Đối soát COD/QR và hóa đơn vận chuyển | Lập sổ và liên kết chứng từ tài chính. Đối chiếu số COD theo đơn, bảng kê đã thu và tiền vào tài khoản shop theo tháng. Đối soát QR theo giao dịch, theo dõi người phụ trách và trạng thái khoản lệch. Kiểm tra và ghi nhận thanh toán hóa đơn ĐVVC riêng. | WP-02, WP-03 |
+| 3 — Đối soát và kiểm soát vận hành | WP-05 — Báo cáo và vận hành thử | Báo cáo đơn giao thất bại, hàng hoàn và COD phải thu. Bổ sung giám sát, cảnh báo, sao lưu và kiểm tra khôi phục. Kiểm thử hiệu năng, bảo mật và chạy thử toàn luồng. | WP-04 |
 
 ## 8. Quản trị và điều kiện nghiệm thu
 

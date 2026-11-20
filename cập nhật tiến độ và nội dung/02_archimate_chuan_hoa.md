@@ -34,7 +34,7 @@ Góc nhìn này trả lời “tại sao phải làm hệ thống”. Ví dụ, 
 
 | Loại | Phần tử |
 |---|---|
-| Stakeholder | Chủ doanh nghiệp; Khách hàng; Kế toán; Kho; CSKH; IT |
+| Stakeholder | Chủ doanh nghiệp; Khách hàng; Nhân viên bán hàng/CSKH; Nhân viên kho; Nhân viên kế toán; Đơn vị vận chuyển; Ngân hàng/Đơn vị cung cấp thanh toán QR; Bộ phận IT/vận hành hệ thống |
 | Driver | Tăng đơn online; giao thất bại/RTO; khó đối soát COD/QR; lệch tồn; kỳ vọng đổi/trả minh bạch |
 | Assessment | Dữ liệu phân tán; thao tác lặp; không có correlation ID; trạng thái trộn; thiếu audit |
 | Goal | G-01…G-06 trong TOGAF |
@@ -75,23 +75,23 @@ Góc nhìn này trả lời “bộ phận nào phối hợp với bộ phận n
 | Business Actor | Business Role được gán |
 |---|---|
 | Khách hàng | Người mua |
-| SME | Sales/CS, Warehouse, Accountant, Owner |
+| SME | Bán hàng/CSKH, Warehouse, Accountant, Owner |
 | Đơn vị vận chuyển | Carrier |
 | Ngân hàng/Đơn vị cung cấp thanh toán QR | QR Payment Provider |
 
 Business Interface gồm `Website đặt hàng`, `Backoffice vận hành`, `Điểm bàn giao/nhận hoàn` và `Kênh tích hợp ĐVVC/Đơn vị QR`. Contract gồm chính sách bán/đổi trả, biểu phí/thỏa thuận dịch vụ ĐVVC và quy tắc thanh toán. Representation gồm xác nhận đơn, nhãn vận chuyển, biên bản nhận hoàn, bảng kê COD, hóa đơn phí vận chuyển và bảng kê QR. Product cung cấp cho khách hàng là `Dịch vụ mua hàng trực tuyến và giao tận nơi`.
 
-Business Flow tiền được tách rõ: `Customer Payment/COD gross` đi từ khách hoặc ĐVVC về shop; `Carrier Invoice Payment` là dòng tiền shop trả ĐVVC theo hóa đơn tháng. ĐVVC phải chuyển đủ COD gross sau đối soát sơ bộ; CarrierInvoice không được net-off vào dòng COD. Với QR, Ngân hàng/Đơn vị QR thu grand total, giả định phí bằng 0 và ĐVVC không thu thêm tại cửa.
+Business Flow tiền được tách rõ: với COD, khách trả cho shipper thu hộ, ĐVVC tổng hợp và chuyển tiền vào tài khoản ngân hàng của shop cuối tháng; `Carrier Invoice Payment` là dòng tiền shop trả ĐVVC theo hóa đơn tháng. ĐVVC phải chuyển đủ COD gross sau đối soát sơ bộ; CarrierInvoice không được net-off vào dòng COD. Với QR, Ngân hàng/Đơn vị QR thu grand total, giả định phí bằng 0 và ĐVVC không thu thêm tại cửa.
 
 ### 4.2 Behavior và service
 
 | Business Process | Business Service được hiện thực | Role thực hiện | Business Object được access |
 |---|---|---|---|
-| P1 Capture & Confirm Order | Order Placement Service | Người mua, Sales/CS | Order, Payment Instruction |
+| P1 Capture & Confirm Order | Order Placement Service | Người mua, Bán hàng/CSKH | Order, Payment Instruction |
 | P2 Reserve & Fulfill | Fulfillment Service | Warehouse | Order, Reservation, Stock Record |
 | P3 Collect/Confirm Payment | Payment Service | Accountant + Đơn vị QR/ĐVVC | Payment, QR Reference, COD Receivable |
-| P4 Deliver & Handle Failure | Delivery Tracking Service | Carrier + Sales/CS | Shipment, Delivery Attempt |
-| P5 Return/Exchange & QC | Return/Exchange Service | Sales/CS + Warehouse | RMA, Returned Item, QC Result |
+| P4 Deliver & Handle Failure | Delivery Tracking Service | Carrier + Bán hàng/CSKH | Shipment, Delivery Attempt |
+| P5 Return/Exchange & QC | Return/Exchange Service | Bán hàng/CSKH + Warehouse | RMA, Returned Item, QC Result |
 | P6 Reconcile & Close | Reconciliation Service | Accountant | COD Statement, QR Statement, COD Remittance, Carrier Invoice, Discrepancy Case |
 
 Business Event `Order submitted` triggers P1; `Payment confirmed/COD accepted` triggers P2; `Parcel handed over` triggers P4; `Delivery failed/Return requested` triggers P5 theo biến thể; `Statement received` triggers P6. Flow ghi nhãn `order`, `parcel`, `payment`, `statement`, không dùng flow không nhãn.
@@ -191,12 +191,12 @@ Góc nhìn này là bản đồ triển khai. `Work Package` là một gói vi�
 
 | Plateau | Work Package | Deliverable | Gap đóng |
 |---|---|---|---|
-| Baseline | — | Excel/Zalo/manual reconciliation | — |
-| Giai đoạn 1 | WP-01 Chuẩn hóa dữ liệu và trạng thái | Từ điển dữ liệu, state model, RBAC, audit/correlation, nền tảng DB | Dữ liệu/quản trị |
-| Giai đoạn 1 | WP-02 Order + Inventory | OMS, reservation, stock ledger, chọn COD/QR | Order/inventory |
-| Giai đoạn 2 | WP-03 Shipping + Returns | Adapter, webhook/outbox, failed delivery/RTO, nhận hoàn/QC/đổi trả | Giao/hoàn/tích hợp |
-| Giai đoạn 3 | WP-04 COD Reconciliation | COD ledger, bảng kê/remittance tháng, three-way match, carrier invoice tách riêng, discrepancy case; mở rộng QR | Kiểm soát tài chính |
-| Target | WP-05 Reporting & Operational Controls | Dashboard, cảnh báo, backup/restore, monitoring, kiểm thử và pilot | Chất lượng/vận hành |
+| Baseline | — | Hiện trạng bốn miền tại [TOGAF, mục 5](01_togaf_chuan_hoa.md#5-hiện-trạng-kiến-trúc-đích-và-khoảng-thiếu-baseline-target-gap) | — |
+| Giai đoạn 1 | WP-01 Chuẩn hóa dữ liệu và trạng thái | Từ điển dữ liệu, state model, RBAC, audit/correlation, nền tảng DB | GAP-D01, nền tảng GAP-D02 và GAP-T01 |
+| Giai đoạn 1 | WP-02 Order + Inventory | OMS, reservation, stock ledger, chọn COD/QR | GAP-B01, GAP-B02, GAP-A01, phần QR tại checkout của GAP-A03 |
+| Giai đoạn 2 | WP-03 Shipping + Returns | Adapter, webhook/outbox, failed delivery/RTO, nhận hoàn/QC/đổi trả | GAP-B03, GAP-A02 |
+| Giai đoạn 3 | WP-04 COD Reconciliation | COD ledger, bảng kê/remittance tháng, three-way match, carrier invoice tách riêng, discrepancy case; mở rộng QR | GAP-B04, phần tài chính và đối soát của GAP-D02/GAP-A03 |
+| Target | WP-05 Reporting & Operational Controls | Dashboard, cảnh báo, backup/restore, monitoring, kiểm thử và pilot | Phần báo cáo và vận hành của GAP-A03/GAP-T01 |
 
 Implementation Event gồm `M1 chuẩn hóa được phê duyệt`, `M2 đơn–tồn chạy thử`, `M3 luồng giao/hoàn chạy E2E`, `M4 đối soát COD đạt kiểm thử` và `M5 nghiệm thu pilot`. Work Package `Realization` Deliverable; Deliverable `Realization` Plateau; Gap `Association` Work Package; Triggering thể hiện dependency WP-01 → WP-02 → WP-03 → WP-04 → WP-05.
 

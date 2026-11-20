@@ -4,11 +4,13 @@ flowchart LR
   X2 --> G0{Hợp lệ?}
   G0 -- Không --> X3[Reject/quarantine file + thông báo] --> Xe((Kết thúc lỗi))
   G0 -- Có --> Gt{Loại hồ sơ?}
-  Gt -- COD --> C1[So sơ bộ expected ↔ carrier collected]
+  Gt -- COD --> C6[ĐVVC gửi bảng kê các khoản shipper đã thu hộ]
+  C6 --> C1[Shop so số COD phải thu đủ điều kiện với bảng kê]
   C1 --> C2{Sơ bộ khớp?}
-  C2 -- Có --> C3[Xác nhận bảng kê; chờ gross remittance]
-  C3 --> C4[Nhận bank credit]
-  C4 --> X5[Final 3-way match]
+  C2 -- Có --> C3[Shop xác nhận bảng kê kỳ tháng]
+  C3 --> C5[ĐVVC chuyển COD còn phải chuyển vào tài khoản shop]
+  C5 --> C4[Shop kiểm tra sao kê theo mã kỳ hoặc mã chuyển khoản]
+  C4 --> X5[Đối chiếu ba nguồn và kiểm tra hạn chuyển]
   C2 -- Không --> X7
   Gt -- QR --> Q1[Match ledger ↔ QR statement ↔ bank credit]
   Q1 --> X5
@@ -17,8 +19,9 @@ flowchart LR
   F2 -- Có --> F3[Phê duyệt và shop thanh toán riêng]
   F2 -- Không --> X7[Tạo ReconciliationCase]
   X5 --> G1{Kết quả?}
-  G1 -- Exact match --> X6[Post collected/paid/remitted entries]
-  G1 -- Partial/missing/duplicate/unknown --> X7[Tạo ReconciliationCase]
+  G1 -- Khớp --> X6[Ghi nhận tiền thực nhận]
+  G1 -- Chưa đến hạn, tiền chưa về --> C4
+  G1 -- Lệch tiền hoặc thiếu chứng từ quá hạn --> X7[Tạo hồ sơ chênh lệch]
   X7 --> X8[Kế toán điều tra với chứng từ]
   X8 --> G2{Resolution?}
   G2 -- Đối tác sửa/chuyển bù --> X9[Ghi nhận remittance/credit bổ sung]

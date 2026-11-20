@@ -40,7 +40,7 @@ Khách đặt hàng → hệ thống tính tiền hàng + phí giao khách trả
 
 Khách đặt hàng COD → kho giao kiện hàng cho đơn vị vận chuyển → giao thất bại → giao lại theo quy định → vẫn thất bại → kiện hàng quay về kho → kho kiểm tra → hàng tốt thì nhập lại → khoản COD được đóng là “chưa thu được”.
 
-Với đơn COD giao thành công, ĐVVC thu đúng tổng đơn gồm phí giao khách trả. Cuối tháng ĐVVC chuyển đủ tiền COD đã thu cho shop; hóa đơn phí dịch vụ vận chuyển được xuất và shop thanh toán riêng, không khấu trừ vào COD.
+Với đơn COD giao thành công, shipper thu đúng tổng đơn gồm phí giao khách trả thay mặt ĐVVC. Cuối tháng ĐVVC chuyển đủ tiền COD đã thu cho shop; hóa đơn phí dịch vụ vận chuyển được xuất và shop thanh toán riêng, không khấu trừ vào COD.
 
 ### Tình huống C — Khách trả hàng sau khi đã nhận
 
