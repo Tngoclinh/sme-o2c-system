@@ -179,12 +179,76 @@ Baseline dưới đây là kịch bản SME giả định của đề tài. Targ
 |---|---|---|---|---|
 | Hạ tầng và bảo vệ dữ liệu | Website nhận đơn, còn hồ sơ vận hành nằm trên máy cá nhân và trong ứng dụng nhắn tin. Theo giả định của bài, các hồ sơ này chưa có cơ chế kiểm soát và khôi phục tập trung. | Hạ tầng chạy ứng dụng và cơ sở dữ liệu tập trung, bảo vệ kết nối bằng HTTPS, giới hạn truy cập theo vai trò, ghi nhật ký, giám sát vận hành và sao lưu có kiểm tra khôi phục. | **GAP-T01.** Thiếu môi trường vận hành tập trung và các kiểm soát nhất quán về truy cập, truyền dữ liệu, nhật ký, giám sát và khôi phục. | WP-01 (hạ tầng và kiểm soát nền) / WP-05 (giám sát, sao lưu và kiểm tra khôi phục) |
 
-## 6. Target Architecture tóm tắt
+### 5.5 Ma trận phân tích khoảng thiếu (Gap Analysis Matrix)
 
-- Business: năm value stream step — Capture Order, Collect/Commit Payment, Fulfill & Deliver, Handle Return, Reconcile & Close; tiền COD và hóa đơn vận chuyển là hai luồng độc lập.
-- Data: Order/CustomerShippingCharge, Reservation/StockEntry, Payment/PaymentEntry, Shipment/ShipmentEvent, CarrierInvoice, Return/RMA, Statement/ReconciliationCase.
-- Application: Web/Backoffice, Order, Inventory, Payment, Fulfillment/Shipping, Return, Reconciliation/Reporting và adapters.
-- Technology: reverse proxy, application runtime, PostgreSQL, object/file storage, scheduler/outbox worker, logging/monitoring; đối tác ngoài qua HTTPS.
+Đọc theo hàng để xem cấu phần hiện có sẽ được giữ lại hay rút khỏi kiến trúc đích. Đọc theo cột để xem mỗi cấu phần đích đã có từ trước hay cần bổ sung. Ma trận của The Open Group đặt **Baseline theo hàng**, **Target theo cột**, thêm hàng cuối **New** và cột cuối **Eliminated**. Nếu cấu phần cũ được thay bằng cấu phần khác, ghi phần cũ ở cột **Eliminated** và phần bổ sung ở hàng **New**, rồi dùng mã GAP để liên kết hai thay đổi. Hướng dẫn dùng nhãn **Included** cho cấu phần có ở cả hai trạng thái. [The Open Group — TOGAF 10th Edition, A Pocket Guide, mục 5.3.2](https://studylib.net/doc/28508170/togaf10--1-)
+
+Mỗi bảng tóm tắt một miền. **Included** nghĩa là giữ lại, **New** nghĩa là bổ sung, **Eliminated** ghi phần chủ đích rút khỏi phạm vi vận hành. Nếu phát hiện một thành phần cần thiết bị bỏ sót ở đích, phải ghi nhận khoảng thiếu để xem xét đưa lại vào thiết kế. Dấu **—** là ô không có đối chiếu trực tiếp. Mã GAP dẫn về mô tả và gói công việc ở mục 5.1–5.4.
+
+#### Nghiệp vụ (pha B)
+
+| Baseline ↓ / Target → | Đặt hàng qua website | Bàn giao đơn và giữ hàng theo quy trình | Theo dõi giao, nhận và kiểm hàng hoàn | Đối soát COD/QR và kiểm phí riêng | Eliminated |
+|---|---|---|---|---|---|
+| Khách đặt hàng qua website | Included | — | — | — | — |
+| Chép lại đơn để chuyển kho và trừ tồn thủ công | — | — | — | — | Bỏ thao tác này trong luồng thường ngày (GAP-B01, GAP-B02) |
+| Tra cứu giao và xử lý hàng hoàn rời rạc | — | — | — | — | Bỏ cách theo dõi rời rạc (GAP-B03) |
+| Dò bảng kê thủ công để chốt tiền | — | — | — | — | Bỏ cách chốt chỉ dựa vào dò bảng kê (GAP-B04) |
+| **New** | — | Bàn giao đơn trực tiếp, giữ và giải phóng hàng theo mốc (GAP-B01, GAP-B02) | Theo dõi lần giao và hồ sơ hàng hoàn đến khi chốt (GAP-B02, GAP-B03) | Kiểm tiền thực nhận, xử lý khoản lệch và thanh toán hóa đơn phí riêng (GAP-B04) | — |
+
+#### Dữ liệu (pha C)
+
+| Baseline ↓ / Target → | Thông tin đơn, vận đơn và chứng từ | Mã liên kết, trạng thái và lịch sử | Sổ biến động tồn, sổ tiền và hồ sơ phí | Eliminated |
+|---|---|---|---|---|
+| Thông tin đơn, vận đơn và chứng từ ở nhiều nguồn | Included | — | — | — |
+| **New** | — | Mã liên kết, trạng thái riêng và lịch sử thay đổi (GAP-D01) | Bản ghi giữ hàng, nhập hoàn, khoản thu, tiền chuyển và phí ĐVVC (GAP-D02) | — |
+
+#### Ứng dụng (pha C)
+
+| Baseline ↓ / Target → | Website | Quản lý đơn và kho | Quản lý giao và đổi/trả | Xác nhận QR, đối soát và báo cáo | Eliminated |
+|---|---|---|---|---|---|
+| Website nhận đơn | Included | — | — | — | — |
+| Excel và tin nhắn dùng để xử lý đơn, tồn và theo dõi ngoại lệ | — | — | — | — | Rút khỏi vai trò công cụ xử lý chính (GAP-A01, GAP-A02) |
+| Công cụ ghép bảng kê thủ công | — | — | — | — | Rút khỏi vai trò công cụ đối soát chính (GAP-A03) |
+| **New** | — | Phần mềm quản lý đơn kết nối với website và kho (GAP-A01) | Tích hợp ĐVVC và ghi nhận hàng hoàn (GAP-A02) | Kết nối Đơn vị QR, ghép chứng từ, theo dõi chênh lệch và lập báo cáo (GAP-A03) | — |
+
+#### Công nghệ (pha D)
+
+| Baseline ↓ / Target → | Hạ tầng ứng dụng và lưu dữ liệu tập trung | Kiểm soát truy cập, giám sát và khôi phục | Eliminated |
+|---|---|---|---|
+| Máy cá nhân làm nơi lưu chính của hồ sơ vận hành | — | — | Rút vai trò nơi lưu chính của máy cá nhân (GAP-T01) |
+| **New** | Môi trường chạy ứng dụng, cơ sở dữ liệu và nơi lưu chứng từ chung (GAP-T01) | Kết nối bảo mật, phân quyền, nhật ký, giám sát và sao lưu có kiểm tra khôi phục (GAP-T01) | — |
+
+## 6. Kiến trúc đích (Target Architecture)
+
+Ở trạng thái đích, khách vẫn đặt hàng trên website. Đơn được đưa thẳng vào hệ thống quản lý đơn của shop (OMS). Nhân viên bán hàng/CSKH tra cứu được tiến độ, kho biết hàng nào cần giữ hoặc xuất, và kế toán lần theo được số tiền từ đơn hàng đến sao kê.
+
+### 6.1 Nghiệp vụ — Một đơn hàng được xử lý thế nào?
+
+1. **Đặt đơn và giữ hàng.** Shop kiểm tra số hàng có thể bán và giữ đúng số lượng cho đơn. Nếu hủy trước khi xuất kho, shop giải phóng phần đã giữ để bán cho khách khác.
+2. **Chọn cách trả tiền.** Với đơn có tiền hàng 280.000 đồng và phí giao thu khách 20.000 đồng, tổng tiền là 300.000 đồng. Nếu khách chọn COD, shipper thu đúng 300.000 đồng khi giao thành công, thay mặt đơn vị vận chuyển (ĐVVC). Nếu khách chọn QR, Đơn vị QR tạo yêu cầu thanh toán 300.000 đồng. Shop chờ xác nhận thanh toán rồi mới giao, và vận đơn có số COD bằng 0.
+3. **Giao hàng và xử lý hàng quay về.** Kho đóng gói và bàn giao cho ĐVVC. Nếu giao thất bại, shop phối hợp giao lại hoặc chuyển hoàn. Nếu khách đã nhận hàng rồi mới yêu cầu đổi/trả, shop mở hồ sơ riêng. Hàng quay về chỉ được đưa lại vào số có thể bán sau khi kho thực nhận và kiểm tra đạt.
+4. **Kiểm tiền và chốt kỳ.** Với COD, kế toán so số phải thu theo đơn, số ĐVVC báo đã thu và tiền thực chuyển vào tài khoản shop. ĐVVC chuyển đủ tiền đã thu theo kỳ tháng. Với QR, kế toán ghép giao dịch theo mã tham chiếu với bảng kê Đơn vị QR và tiền vào ngân hàng. Khoản lệch có hồ sơ theo dõi. Shop kiểm tra và thanh toán hóa đơn phí ĐVVC riêng.
+
+### 6.2 Dữ liệu — Cần lưu gì để tra lại?
+
+Mỗi đơn có mã để tìm các vận đơn, giao dịch, hồ sơ đổi/trả và chứng từ liên quan. Đơn, hàng trong kho, vận chuyển và thanh toán có trạng thái riêng. Ví dụ, một đơn COD có thể đã giao nhưng shop vẫn đang chờ ĐVVC chuyển tiền.
+
+Sổ kho ghi từng lần giữ, giải phóng, xuất và nhập lại hàng. Hồ sơ tiền ghi riêng số phải thu, số đã thu, số đã chuyển và khoản hoàn tiền nếu có. Phí giao thu khách nằm trong tổng đơn. Hóa đơn phí vận chuyển của shop có hồ sơ riêng và được liên kết với chứng từ thanh toán.
+
+### 6.3 Ứng dụng — Ai dùng phần nào?
+
+| Phần của hệ thống | Công việc hỗ trợ |
+|---|---|
+| Website và màn hình quản trị | Khách đặt và theo dõi đơn. Nhân viên bán hàng/CSKH xem trạng thái để hỗ trợ khách. |
+| Quản lý đơn và kho | Tiếp nhận đơn, giữ hàng, hướng dẫn kho chuẩn bị đơn và lưu biến động tồn. |
+| Vận chuyển và đổi/trả | Gửi yêu cầu tạo vận đơn cho ĐVVC, nhận kết quả giao, theo dõi kiện quay về và lưu kết quả kiểm hàng. |
+| Thanh toán, đối soát và báo cáo | Nhận thông báo QR, ghi khoản COD, so bảng kê với tiền thực nhận và theo dõi các khoản lệch. |
+
+### 6.4 Công nghệ — Hệ thống chạy và được bảo vệ ra sao?
+
+Các phân hệ chạy chung trên một ứng dụng. Dữ liệu nghiệp vụ được lưu trong cơ sở dữ liệu PostgreSQL và chứng từ được lưu ở nơi lưu trữ tập trung. Hệ thống phân quyền theo công việc, ghi lịch sử thay đổi và dùng kết nối HTTPS khi trao đổi với đối tác.
+
+Khi ĐVVC hoặc Đơn vị QR tạm thời không phản hồi, tác vụ gửi đi được lưu để thử lại. IT theo dõi lỗi, sao lưu dữ liệu và kiểm tra khả năng khôi phục.
 
 ## 7. Lộ trình triển khai (Roadmap)
 
