@@ -38,18 +38,18 @@ Ngoài phạm vi: procurement, multi-warehouse, marketplace, dynamic pricing, ge
 
 ### 2.2 Bên liên quan (stakeholder) và mối quan tâm (concern)
 
-“Bên liên quan” không chỉ là người dùng phần mềm. Chủ shop quan tâm tiền và chi phí; kho quan tâm số lượng hàng; kế toán quan tâm đối soát; khách hàng quan tâm giao hàng và đổi trả. Vì mối quan tâm khác nhau nên mỗi người cần một góc nhìn tài liệu khác nhau.
+“Bên liên quan” không chỉ là người dùng phần mềm mà còn gồm các đối tác trao đổi hàng hóa, tiền và dữ liệu với shop. Bảng dưới đây xác định rõ mỗi bên làm gì trong luồng Order-to-Cash và điều họ cần hệ thống bảo đảm.
 
-| Stakeholder | Concern | View/đầu ra trả lời |
+| Stakeholder | Vai trò/chức năng | Mối quan tâm chính |
 |---|---|---|
-| Chủ doanh nghiệp | Chi phí, tiền về, tỷ lệ thất bại/hoàn | Vision, KPI, roadmap, dashboard |
-| Khách hàng | Đơn đúng, thanh toán an toàn, đổi/trả rõ ràng | BPMN-01/02, UI trạng thái |
-| CSKH | Tra cứu và xử lý ngoại lệ | Business/Application view, API/UI |
-| Kho | Reservation, xuất/nhập/QC không trùng | Inventory ledger, BPMN-01/02 |
-| Kế toán | COD/QR, phí, refund, chênh lệch | BPMN-03, reconciliation view |
-| IT/vận hành | Bảo mật, phục hồi, vận hành đơn giản | Technology view, ADR, risk |
-| ĐVVC | Tạo vận đơn, trạng thái, COD, chuyển hoàn | Adapter contract, webhook |
-| Ngân hàng/Đơn vị cung cấp thanh toán QR | Tạo/quản lý QR, reference, callback, bảng kê và refund | QR Payment Adapter, reconciliation |
+| Chủ doanh nghiệp | Quyết định đầu tư; phê duyệt chính sách bán hàng, phí vận chuyển, lộ trình triển khai và các điều chỉnh tài chính quan trọng; theo dõi KPI | Chi phí, doanh thu, dòng tiền COD, hiệu quả vận chuyển và khả năng kiểm soát hoạt động |
+| Khách hàng | Đặt hàng; chọn COD hoặc QR; thanh toán, nhận hàng; theo dõi đơn và yêu cầu đổi/trả | Thông tin đơn chính xác, thanh toán an toàn, không bị thu trùng, giao hàng và đổi/trả thuận tiện |
+| Nhân viên bán hàng/CSKH | Kiểm tra thông tin đơn khi cần, theo dõi trạng thái, hỗ trợ khách tra cứu đơn và phối hợp giao lại khi giao thất bại | Thông tin đơn chính xác, dễ tra cứu và hỗ trợ khách kịp thời |
+| Nhân viên kho | Lấy–đóng gói–bàn giao hàng; nhận hàng chuyển hoàn/đổi trả; quét mã, kiểm tra chất lượng và quyết định nhập lại hoặc cách ly | Tồn kho chính xác, tránh xuất/nhập trùng và không bán hàng hoàn khi chưa QC đạt |
+| Nhân viên kế toán | Đối soát COD/QR; kiểm tra bảng kê và tiền vào ngân hàng; mở, điều tra và theo dõi hồ sơ chênh lệch; kiểm hóa đơn ĐVVC và thực hiện thanh toán đã được phê duyệt | Dòng tiền, công nợ, chênh lệch, chứng từ đầy đủ và việc không khấu trừ nhầm phí ĐVVC vào COD |
+| Đơn vị vận chuyển | Nhận yêu cầu giao; giao hàng; thu đúng COD; cập nhật trạng thái, giao lại/chuyển hoàn; lập bảng kê, chuyển đủ COD gross và xuất hóa đơn phí riêng theo tháng | Dữ liệu vận đơn/COD chính xác, trao đổi trạng thái tin cậy và quy trình đối soát–thanh toán đúng kỳ |
+| Ngân hàng/Đơn vị cung cấp thanh toán QR | Nhận yêu cầu tạo và quản lý QR Payment Intent; xử lý thanh toán; gửi callback/bảng kê; tiếp nhận yêu cầu hoàn tiền từ shop và thông báo kết quả | Mã tham chiếu và số tiền chính xác, callback an toàn/chống trùng, trạng thái giao dịch và đối soát rõ ràng |
+| Bộ phận IT/vận hành hệ thống | Quản trị người dùng/phân quyền; duy trì tích hợp; giám sát lỗi, retry, sao lưu–khôi phục và bảo mật hệ thống | Tính sẵn sàng, bảo mật, khả năng phục hồi, truy vết và dễ bảo trì |
 
 ### 2.3 Mục tiêu, kết quả và chỉ số đo (Goal, Outcome, KPI)
 
