@@ -8,7 +8,9 @@ Nói ngắn gọn, bản cũ đã có khung tốt nhưng mới làm kỹ phần 
 
 ## 1. Kết luận
 
-Hai tệp gốc đã chọn hướng kiến trúc hợp lý cho SME: modular monolith, cơ sở dữ liệu quan hệ, sổ tồn kho, adapter đơn vị vận chuyển, webhook và module đối soát. Tuy vậy, chúng **chưa thể coi là hoàn chỉnh theo phạm vi đề tài**. Bản chuẩn hóa đi kèm sửa các điểm quan trọng dưới đây; hai tệp gốc `togaf.md` và `archimate.md` được giữ làm lịch sử, còn `01_togaf_chuan_hoa.md` và `02_archimate_chuan_hoa.md` là bản dùng để nộp.
+Hai tệp gốc đã chọn hướng kiến trúc hợp lý cho SME: modular monolith, cơ sở dữ liệu quan hệ, sổ tồn kho, adapter đơn vị vận chuyển, webhook và module đối soát. Tuy vậy, chúng **chưa thể coi là hoàn chỉnh theo phạm vi đề tài**. Hai bản nháp đầu vào được lưu riêng để tham khảo. [Bản nháp TOGAF](ban_nhap_dau_vao/togaf.md) · [Bản nháp ArchiMate](ban_nhap_dau_vao/archimate.md)
+
+Bản chuẩn hóa đi kèm sửa các điểm dưới đây. Hai tài liệu dùng để nộp là [TOGAF](01_togaf_chuan_hoa.md) và [ArchiMate](02_archimate_chuan_hoa.md).
 
 ## 2. Phát hiện và quyết định sửa
 

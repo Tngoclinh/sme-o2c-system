@@ -327,3 +327,57 @@ Course of Action `Realization` Capability; Resource được `Assignment` cho Ca
 
 Ví dụ FR-08/09 yêu cầu đối soát COD và phát hiện chênh lệch. Kế toán thực hiện tại P6, dùng dịch vụ đối soát để ghép bảng kê với chứng từ ngân hàng. Hạ tầng lưu dữ liệu và chứng từ để tra lại. WP-04 là gói việc bàn giao khả năng này.
 
+## Phụ lục C — Ý nghĩa và lý do cần từng Data Object
+
+Phụ lục giải thích theo thứ tự của [bảng ở mục 5.1](#51-data-object-và-ownership). Mỗi Data Object đại diện cho một nhóm thông tin mà ứng dụng xử lý. Một số đối tượng xuất hiện cùng dòng trong bảng vì phục vụ cùng một công việc. Phần dưới giải thích riêng nhiệm vụ của từng đối tượng trong những dòng đó.
+
+### C.1 Order — Đơn hàng
+
+`Order` ghi khách đặt gì, số lượng bao nhiêu, chọn cách thanh toán nào và tổng số tiền phải trả. Phân hệ Đơn hàng cần bản ghi này để xác nhận đơn và cung cấp cùng một bộ thông tin cho kho, vận chuyển và kế toán. Ví dụ, đơn có tiền hàng 280.000 đồng và phí giao thu khách 20.000 đồng sẽ ghi tổng cộng 300.000 đồng. Với COD, đây là số tiền được gửi cho ĐVVC để thu khi giao.
+
+### C.2 Reservation — Bản ghi giữ chỗ hàng
+
+`Reservation` ghi mặt hàng, số lượng đã dành cho một đơn và tình trạng giữ chỗ. Phân hệ Kho cần biết phần hàng nào đã được hứa cho khách để tránh phân bổ một món hàng cho hai đơn. Ví dụ, kho còn ba sản phẩm có thể bán và giữ một sản phẩm cho đơn A. Hai sản phẩm còn lại vẫn có thể bán. Nếu đơn A bị hủy trước khi xuất, kho giải phóng phần đã giữ.
+
+### C.3 StockEntry — Dòng ghi biến động tồn
+
+`StockEntry` ghi **một lần biến động tồn**, gồm mặt hàng, số lượng, lý do và tham chiếu liên quan. Sổ biến động giữ lại các dòng cũ để kho lần theo vì sao số tồn thay đổi. Ví dụ, khi kiện quay về, kho ghi nhận hàng vào khu chờ kiểm. Sau khi xác nhận hàng đạt, kho ghi thêm một dòng nhập lại vào lượng có thể bán. Hai dòng giúp tra được hàng đã về lúc nào và được bán lại từ lúc nào.
+
+### C.4 Payment — Hồ sơ thanh toán
+
+`Payment` cho biết đơn được thanh toán theo phương thức nào và việc thanh toán đang ở trạng thái gì. Phân hệ Thanh toán cần hồ sơ riêng vì tiến độ tiền có thể khác tiến độ giao. Ví dụ, một đơn QR có thể đã được xác nhận thanh toán trong khi kho vẫn đang đóng gói. Với COD, kiện có thể đã giao và ĐVVC đã thu hộ trong khi shop còn chờ tiền về.
+
+### C.5 PaymentEntry — Dòng ghi một mốc tiền
+
+`PaymentEntry` ghi **một mốc tài chính**, gồm loại mốc, số tiền, thời điểm và mã tham chiếu. Phân hệ Thanh toán lưu từng dòng để giải thích số tiền đang ở đâu và kiểm tra lại khi có lệch. Ví dụ, một đơn COD có thể có ba dòng riêng cho khoản dự kiến thu 300.000 đồng, khoản ĐVVC báo đã thu 300.000 đồng và khoản đã xác nhận chuyển về shop. Ba dòng biểu diễn các mốc của cùng một khoản tiền.
+
+### C.6 Shipment — Vận đơn
+
+`Shipment` ghi mã vận đơn, bên vận chuyển và trạng thái hiện tại của kiện hàng. Phân hệ Vận chuyển cần mã này để ghép thông báo từ ĐVVC với kiện và đơn tương ứng. Ví dụ, khi kiện có mã VĐ-01 đã giao, Bán hàng/CSKH có thể tra mã đó để thông báo kết quả cho khách.
+
+### C.7 ShipmentEvent — Sự kiện vận chuyển
+
+`ShipmentEvent` ghi từng lần ĐVVC thông báo một thay đổi, kèm mã sự kiện, thời điểm và trạng thái đối tác gửi. Các dòng sự kiện giúp xem lại hành trình và nhận biết thông báo gửi lặp. Ví dụ, VĐ-01 giao thất bại vào buổi sáng và giao thành công vào hôm sau. `Shipment` cho biết trạng thái hiện tại là đã giao, còn hai `ShipmentEvent` giải thích kiện đã đi qua những lần giao nào.
+
+### C.8 Return/RMA — Hồ sơ đổi, trả hoặc hàng hoàn
+
+`Return` tập hợp thông tin về kiện quay về, gồm đơn hoặc vận đơn liên quan, mặt hàng, lý do và kết quả kiểm tra. `RMA` là mã hoặc hồ sơ cho phép và theo dõi yêu cầu đổi/trả sau giao. Phân hệ Đổi/trả cần hồ sơ để biết kiện nào đang chờ về, đã thực nhận và sẽ được xử lý ra sao. Ví dụ, kiện COD quay về vì giao thất bại được nhận theo mã vận đơn. Nếu khách đã nhận rồi mới yêu cầu trả, shop dùng hồ sơ RMA để theo dõi yêu cầu đó. Trong cả hai trường hợp, kho chỉ tăng lượng có thể bán sau khi thực nhận và kiểm tra đạt.
+
+### C.9 Statement/Remittance — Bảng kê và chứng từ chuyển tiền
+
+`Statement` là bảng kê của đối tác, cho biết họ báo đã thu hoặc đã xử lý giao dịch nào. `Remittance` lưu thông tin về khoản đối tác chuyển cho shop, chẳng hạn số tiền, kỳ và mã chuyển khoản. Kế toán cần hai nguồn này để so với số phải thu theo đơn và xác nhận tiền thực nhận bằng sao kê ngân hàng. Ví dụ, bảng kê tháng ghi nhiều vận đơn, còn ĐVVC chuyển một khoản tổng hợp. Kế toán dùng mã kỳ hoặc mã chuyển khoản để đối chiếu khoản tiền về với tổng các dòng thuộc kỳ đó.
+
+### C.10 CarrierInvoice — Hóa đơn dịch vụ vận chuyển
+
+`CarrierInvoice` ghi khoản phí shop phải trả ĐVVC, kỳ tính phí và tình trạng kiểm tra, phê duyệt hoặc thanh toán. Kế toán cần hồ sơ riêng vì đây là tiền **shop trả cho ĐVVC**, còn COD là tiền **ĐVVC thu hộ và chuyển về shop**. Ví dụ, ĐVVC chuyển đủ tiền COD đã thu trong tháng. Shop kiểm tra hóa đơn vận chuyển và thanh toán phí bằng một giao dịch riêng.
+
+### C.11 ReconciliationCase — Hồ sơ chênh lệch đối soát
+
+`ReconciliationCase` ghi khoản chưa khớp, số chênh lệch, chứng từ, người phụ trách và kết quả xử lý. Một hồ sơ riêng giúp theo dõi vấn đề qua nhiều lần kiểm tra đến khi có kết luận. Ví dụ, bảng kê ghi đã thu 300.000 đồng nhưng chứng từ của khoản cần đối chiếu chỉ cho thấy shop nhận 280.000 đồng. Kế toán mở hồ sơ thiếu 20.000 đồng và dùng mã kỳ hoặc mã chuyển khoản để xác minh với ĐVVC.
+
+### C.12 OutboxEvent/InboxEvent — Bản ghi thông báo gửi và nhận
+
+`OutboxEvent` lưu việc hệ thống **cần gửi đi** để có thể thử lại khi mất kết nối. Ví dụ, sau khi tạo yêu cầu vận đơn, ứng dụng lưu yêu cầu gửi ĐVVC vào hộp thư gửi. Nếu đối tác tạm thời chưa phản hồi, tiến trình nền có thể tiếp tục xử lý yêu cầu đó.
+
+`InboxEvent` lưu thông báo hệ thống **đã nhận** để nhận biết và kiểm soát việc xử lý lặp. Ví dụ, nếu ĐVVC gửi cùng một thông báo “đã giao” hai lần với cùng mã sự kiện, ứng dụng nhận diện lần gửi lặp và chỉ áp dụng nghiệp vụ một lần. `InboxEvent` theo dõi việc tiếp nhận thông báo kỹ thuật, còn `ShipmentEvent` ghi thay đổi có ý nghĩa đối với hành trình vận đơn.
+
