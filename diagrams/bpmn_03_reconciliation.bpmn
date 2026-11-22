@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="B3_Definitions" targetNamespace="https://sme-o2c.example/bpmn" exporter="IT4350 SME O2C">
+  <bpmn:message id="B3_Message_1" name="Bảng kê COD theo kỳ"/>
+  <bpmn:message id="B3_Message_2" name="Bảng kê giao dịch QR"/>
+  <bpmn:message id="B3_Message_3" name="Hóa đơn dịch vụ vận chuyển"/>
+  <bpmn:message id="B3_Message_4" name="Xác nhận bảng kê COD theo kỳ"/>
+  <bpmn:message id="B3_Message_5" name="Sao kê hoặc thông báo tiền vào"/>
+  <bpmn:collaboration id="B3_Collaboration" name="BPMN-03 — Đối soát COD/QR và hóa đơn phí">
+    <bpmn:participant id="B3_shop" name="Shop SME" processRef="B3_Process"/>
+    <bpmn:participant id="B3_carrier" name="Đơn vị vận chuyển"/>
+    <bpmn:participant id="B3_qr" name="Đơn vị cung cấp thanh toán QR"/>
+    <bpmn:participant id="B3_bank" name="Ngân hàng nhận tiền của shop"/>
+    <bpmn:messageFlow id="B3_MsgFlow_1" name="Bảng kê COD theo kỳ" sourceRef="B3_carrier" targetRef="B3_startCod" messageRef="B3_Message_1"/>
+    <bpmn:messageFlow id="B3_MsgFlow_2" name="Bảng kê giao dịch QR" sourceRef="B3_qr" targetRef="B3_startQr" messageRef="B3_Message_2"/>
+    <bpmn:messageFlow id="B3_MsgFlow_3" name="Hóa đơn dịch vụ vận chuyển" sourceRef="B3_carrier" targetRef="B3_startInvoice" messageRef="B3_Message_3"/>
+    <bpmn:messageFlow id="B3_MsgFlow_4" name="Xác nhận bảng kê COD theo kỳ" sourceRef="B3_confirm" targetRef="B3_carrier" messageRef="B3_Message_4"/>
+    <bpmn:messageFlow id="B3_MsgFlow_5" name="Sao kê hoặc thông báo tiền vào" sourceRef="B3_bank" targetRef="B3_gotBank" messageRef="B3_Message_5"/>
+  </bpmn:collaboration>
+  <bpmn:process id="B3_Process" name="BPMN-03 — Đối soát COD/QR và hóa đơn phí" isExecutable="false">
+    <bpmn:laneSet id="B3_LaneSet">
+      <bpmn:lane id="B3_Lane_import" name="Tiếp nhận hồ sơ">
+        <bpmn:flowNodeRef>B3_startCod</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_startQr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_startInvoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_import</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_valid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_reject</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_rejectEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_wait</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_gotBank</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_due</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_saveBank</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="B3_Lane_match" name="Đối soát tự động">
+        <bpmn:flowNodeRef>B3_type</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_cod</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_codOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_confirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_qrCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_qrOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_bankCheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_bankOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_pending</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_compare</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_matched</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_post</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_ok</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_confirmed</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="B3_Lane_acc" name="Kế toán">
+        <bpmn:flowNodeRef>B3_invoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_invoiceOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_invoicePay</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_invoiceEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_case</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_investigate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_updated</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_record</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B3_open</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:dataObject id="B3_Object_Statement" name="Statement/Remittance và sao kê"/>
+    <bpmn:dataObjectReference id="B3_Data_Statement" name="Statement/Remittance và sao kê" dataObjectRef="B3_Object_Statement"/>
+    <bpmn:dataObject id="B3_Object_CarrierInvoice" name="CarrierInvoice (hóa đơn phí)"/>
+    <bpmn:dataObjectReference id="B3_Data_CarrierInvoice" name="CarrierInvoice (hóa đơn phí)" dataObjectRef="B3_Object_CarrierInvoice"/>
+    <bpmn:dataObject id="B3_Object_ReconciliationCase" name="ReconciliationCase (khoản lệch)"/>
+    <bpmn:dataObjectReference id="B3_Data_ReconciliationCase" name="ReconciliationCase (khoản lệch)" dataObjectRef="B3_Object_ReconciliationCase"/>
+    <bpmn:dataObject id="B3_Object_PaymentEntry" name="PaymentEntry (tiền thực nhận)"/>
+    <bpmn:dataObjectReference id="B3_Data_PaymentEntry" name="PaymentEntry (tiền thực nhận)" dataObjectRef="B3_Object_PaymentEntry"/>
+    <bpmn:startEvent id="B3_startCod" name="Đã nhận bảng kê COD">
+      <bpmn:outgoing>B3_Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B3_EventDef_startCod" messageRef="B3_Message_1"/>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="B3_startQr" name="Đã nhận bảng kê QR">
+      <bpmn:outgoing>B3_Flow_2</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B3_EventDef_startQr" messageRef="B3_Message_2"/>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="B3_startInvoice" name="Đã nhận hóa đơn vận chuyển">
+      <bpmn:outgoing>B3_Flow_3</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B3_EventDef_startInvoice" messageRef="B3_Message_3"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="B3_import" name="Nhập và kiểm tra hồ sơ">
+      <bpmn:incoming>B3_Flow_1</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_2</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_3</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="B3_valid" name="Hồ sơ hợp lệ?" default="B3_Flow_6">
+      <bpmn:incoming>B3_Flow_4</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_5</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="B3_reject" name="Ghi lỗi và yêu cầu bổ sung">
+      <bpmn:incoming>B3_Flow_6</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="B3_rejectEnd" name="Đã trả hồ sơ lỗi">
+      <bpmn:incoming>B3_Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="B3_type" name="Loại hồ sơ?">
+      <bpmn:incoming>B3_Flow_5</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_39</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_8</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_9</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_10</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B3_cod" name="So COD theo đơn với bảng kê">
+      <bpmn:incoming>B3_Flow_8</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_11</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="B3_codOk" name="Bảng kê COD khớp?" default="B3_Flow_13">
+      <bpmn:incoming>B3_Flow_11</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_12</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_13</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="B3_confirm" name="Gửi xác nhận bảng kê COD" messageRef="B3_Message_4">
+      <bpmn:incoming>B3_Flow_42</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_14</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:serviceTask id="B3_qrCheck" name="So giao dịch QR với bảng kê">
+      <bpmn:incoming>B3_Flow_9</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_15</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="B3_qrOk" name="Bảng kê QR khớp?" default="B3_Flow_17">
+      <bpmn:incoming>B3_Flow_15</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_16</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_17</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="B3_invoice" name="Kiểm hóa đơn phí theo vận đơn">
+      <bpmn:incoming>B3_Flow_10</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_18</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataInput id="B3_IO_CarrierInvoice" name="CarrierInvoice (hóa đơn phí)"/>
+        <bpmn:inputSet><bpmn:dataInputRefs>B3_IO_CarrierInvoice</bpmn:dataInputRefs></bpmn:inputSet>
+        <bpmn:outputSet></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataInputAssociation id="B3_DataAssoc_2"><bpmn:sourceRef>B3_Data_CarrierInvoice</bpmn:sourceRef><bpmn:targetRef>B3_IO_CarrierInvoice</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="B3_invoiceOk" name="Hóa đơn đúng?" default="B3_Flow_20">
+      <bpmn:incoming>B3_Flow_18</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_19</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_20</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="B3_invoicePay" name="Duyệt và ghi thanh toán phí riêng">
+      <bpmn:incoming>B3_Flow_19</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_21</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="B3_invoiceEnd" name="Đã xử lý hóa đơn phí">
+      <bpmn:incoming>B3_Flow_21</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="B3_bankCheck" name="Tra chứng từ và hạn tiền về">
+      <bpmn:incoming>B3_Flow_14</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_16</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_30</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_40</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_41</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_22</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="B3_bankOk" name="Có chứng từ thực nhận?" default="B3_Flow_24">
+      <bpmn:incoming>B3_Flow_22</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_23</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_24</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="B3_pending" name="Đã đến hạn chuyển tiền?" default="B3_Flow_26">
+      <bpmn:incoming>B3_Flow_24</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_25</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_26</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:eventBasedGateway id="B3_wait" name="Chờ sao kê hoặc đến hạn">
+      <bpmn:incoming>B3_Flow_26</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_27</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_28</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="B3_gotBank" name="Đã nhận sao kê bổ sung">
+      <bpmn:incoming>B3_Flow_27</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_29</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B3_EventDef_gotBank" messageRef="B3_Message_5"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="B3_due" name="Đã đến hạn đối soát">
+      <bpmn:incoming>B3_Flow_28</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_30</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="B3_EventDef_due"><bpmn:timeDate xsi:type="bpmn:tFormalExpression">settlementDueAt</bpmn:timeDate></bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="B3_compare" name="Kiểm ba nguồn tiền">
+      <bpmn:incoming>B3_Flow_23</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_31</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataInput id="B3_IO_Statement" name="Statement/Remittance và sao kê"/>
+        <bpmn:inputSet><bpmn:dataInputRefs>B3_IO_Statement</bpmn:dataInputRefs></bpmn:inputSet>
+        <bpmn:outputSet></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataInputAssociation id="B3_DataAssoc_1"><bpmn:sourceRef>B3_Data_Statement</bpmn:sourceRef><bpmn:targetRef>B3_IO_Statement</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="B3_matched" name="Ba nguồn khớp?" default="B3_Flow_33">
+      <bpmn:incoming>B3_Flow_31</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_32</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_33</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B3_post" name="Ghi thực nhận và chốt đối soát">
+      <bpmn:incoming>B3_Flow_32</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_34</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B3_IO_PaymentEntry" name="PaymentEntry (tiền thực nhận)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B3_IO_PaymentEntry</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B3_DataAssoc_4"><bpmn:sourceRef>B3_IO_PaymentEntry</bpmn:sourceRef><bpmn:targetRef>B3_Data_PaymentEntry</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="B3_ok" name="Đã chốt đối soát">
+      <bpmn:incoming>B3_Flow_34</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="B3_case" name="Mở hoặc cập nhật hồ sơ chênh lệch">
+      <bpmn:incoming>B3_Flow_13</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_17</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_20</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_25</bpmn:incoming>
+      <bpmn:incoming>B3_Flow_33</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_35</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B3_IO_ReconciliationCase" name="ReconciliationCase (khoản lệch)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B3_IO_ReconciliationCase</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B3_DataAssoc_3"><bpmn:sourceRef>B3_IO_ReconciliationCase</bpmn:sourceRef><bpmn:targetRef>B3_Data_ReconciliationCase</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:userTask id="B3_investigate" name="Xác minh với chứng từ và đối tác">
+      <bpmn:incoming>B3_Flow_35</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_36</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="B3_updated" name="Đủ chứng từ xử lý lại?" default="B3_Flow_38">
+      <bpmn:incoming>B3_Flow_36</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_37</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_38</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B3_record" name="Lưu chứng từ đã xác minh">
+      <bpmn:incoming>B3_Flow_37</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_39</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="B3_open" name="Còn hồ sơ chênh lệch mở">
+      <bpmn:incoming>B3_Flow_38</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="B3_saveBank" name="Lưu thông tin tiền vào theo mã tham chiếu">
+      <bpmn:incoming>B3_Flow_29</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_40</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="B3_confirmed" name="Đã gửi xác nhận cho kỳ này?" default="B3_Flow_42">
+      <bpmn:incoming>B3_Flow_12</bpmn:incoming>
+      <bpmn:outgoing>B3_Flow_41</bpmn:outgoing>
+      <bpmn:outgoing>B3_Flow_42</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="B3_Flow_1" sourceRef="B3_startCod" targetRef="B3_import"/>
+    <bpmn:sequenceFlow id="B3_Flow_2" sourceRef="B3_startQr" targetRef="B3_import"/>
+    <bpmn:sequenceFlow id="B3_Flow_3" sourceRef="B3_startInvoice" targetRef="B3_import"/>
+    <bpmn:sequenceFlow id="B3_Flow_4" sourceRef="B3_import" targetRef="B3_valid"/>
+    <bpmn:sequenceFlow id="B3_Flow_5" name="Có" sourceRef="B3_valid" targetRef="B3_type"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_6" name="Không" sourceRef="B3_valid" targetRef="B3_reject"/>
+    <bpmn:sequenceFlow id="B3_Flow_7" sourceRef="B3_reject" targetRef="B3_rejectEnd"/>
+    <bpmn:sequenceFlow id="B3_Flow_8" name="Bảng kê COD" sourceRef="B3_type" targetRef="B3_cod"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Bảng kê COD</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_9" name="Bảng kê QR" sourceRef="B3_type" targetRef="B3_qrCheck"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Bảng kê QR</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_10" name="Hóa đơn phí" sourceRef="B3_type" targetRef="B3_invoice"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Hóa đơn phí</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_11" sourceRef="B3_cod" targetRef="B3_codOk"/>
+    <bpmn:sequenceFlow id="B3_Flow_12" name="Có" sourceRef="B3_codOk" targetRef="B3_confirmed"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_13" name="Không" sourceRef="B3_codOk" targetRef="B3_case"/>
+    <bpmn:sequenceFlow id="B3_Flow_14" sourceRef="B3_confirm" targetRef="B3_bankCheck"/>
+    <bpmn:sequenceFlow id="B3_Flow_15" sourceRef="B3_qrCheck" targetRef="B3_qrOk"/>
+    <bpmn:sequenceFlow id="B3_Flow_16" name="Có" sourceRef="B3_qrOk" targetRef="B3_bankCheck"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_17" name="Không" sourceRef="B3_qrOk" targetRef="B3_case"/>
+    <bpmn:sequenceFlow id="B3_Flow_18" sourceRef="B3_invoice" targetRef="B3_invoiceOk"/>
+    <bpmn:sequenceFlow id="B3_Flow_19" name="Có" sourceRef="B3_invoiceOk" targetRef="B3_invoicePay"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_20" name="Không" sourceRef="B3_invoiceOk" targetRef="B3_case"/>
+    <bpmn:sequenceFlow id="B3_Flow_21" sourceRef="B3_invoicePay" targetRef="B3_invoiceEnd"/>
+    <bpmn:sequenceFlow id="B3_Flow_22" sourceRef="B3_bankCheck" targetRef="B3_bankOk"/>
+    <bpmn:sequenceFlow id="B3_Flow_23" name="Có" sourceRef="B3_bankOk" targetRef="B3_compare"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_24" name="Chưa có" sourceRef="B3_bankOk" targetRef="B3_pending"/>
+    <bpmn:sequenceFlow id="B3_Flow_25" name="Có" sourceRef="B3_pending" targetRef="B3_case"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_26" name="Chưa đến hạn" sourceRef="B3_pending" targetRef="B3_wait"/>
+    <bpmn:sequenceFlow id="B3_Flow_27" sourceRef="B3_wait" targetRef="B3_gotBank"/>
+    <bpmn:sequenceFlow id="B3_Flow_28" sourceRef="B3_wait" targetRef="B3_due"/>
+    <bpmn:sequenceFlow id="B3_Flow_29" sourceRef="B3_gotBank" targetRef="B3_saveBank"/>
+    <bpmn:sequenceFlow id="B3_Flow_30" sourceRef="B3_due" targetRef="B3_bankCheck"/>
+    <bpmn:sequenceFlow id="B3_Flow_31" sourceRef="B3_compare" targetRef="B3_matched"/>
+    <bpmn:sequenceFlow id="B3_Flow_32" name="Có" sourceRef="B3_matched" targetRef="B3_post"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_33" name="Không" sourceRef="B3_matched" targetRef="B3_case"/>
+    <bpmn:sequenceFlow id="B3_Flow_34" sourceRef="B3_post" targetRef="B3_ok"/>
+    <bpmn:sequenceFlow id="B3_Flow_35" sourceRef="B3_case" targetRef="B3_investigate"/>
+    <bpmn:sequenceFlow id="B3_Flow_36" sourceRef="B3_investigate" targetRef="B3_updated"/>
+    <bpmn:sequenceFlow id="B3_Flow_37" name="Có" sourceRef="B3_updated" targetRef="B3_record"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_38" name="Chưa đủ" sourceRef="B3_updated" targetRef="B3_open"/>
+    <bpmn:sequenceFlow id="B3_Flow_39" sourceRef="B3_record" targetRef="B3_type"/>
+    <bpmn:sequenceFlow id="B3_Flow_40" sourceRef="B3_saveBank" targetRef="B3_bankCheck"/>
+    <bpmn:sequenceFlow id="B3_Flow_41" name="Đã gửi" sourceRef="B3_confirmed" targetRef="B3_bankCheck"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Đã gửi</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B3_Flow_42" name="Chưa gửi" sourceRef="B3_confirmed" targetRef="B3_confirm"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="B3_Diagram" name="BPMN-03 — Đối soát COD/QR và hóa đơn phí">
+    <bpmndi:BPMNPlane id="B3_Plane" bpmnElement="B3_Collaboration">
+      <bpmndi:BPMNShape id="B3_Di_shop" bpmnElement="B3_shop" isHorizontal="true"><dc:Bounds x="30" y="170" width="2892" height="954"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_carrier" bpmnElement="B3_carrier" isHorizontal="true"><dc:Bounds x="87" y="48" width="863" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_qr" bpmnElement="B3_qr" isHorizontal="true"><dc:Bounds x="972" y="48" width="686" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_bank" bpmnElement="B3_bank" isHorizontal="true"><dc:Bounds x="1680" y="48" width="863" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_Lane_import" bpmnElement="B3_Lane_import" isHorizontal="true"><dc:Bounds x="59" y="170" width="2863" height="318"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_Lane_match" bpmnElement="B3_Lane_match" isHorizontal="true"><dc:Bounds x="59" y="488" width="2863" height="318"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_Lane_acc" bpmnElement="B3_Lane_acc" isHorizontal="true"><dc:Bounds x="59" y="806" width="2863" height="318"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_startCod" bpmnElement="B3_startCod"><dc:Bounds x="148" y="254" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="89" y="294" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_startQr" bpmnElement="B3_startQr"><dc:Bounds x="148" y="325" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="89" y="365" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_startInvoice" bpmnElement="B3_startInvoice"><dc:Bounds x="148" y="396" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="89" y="436" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_import" bpmnElement="B3_import"><dc:Bounds x="271" y="312" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_valid" bpmnElement="B3_valid" isMarkerVisible="true"><dc:Bounds x="496" y="319" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="443" y="371" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_reject" bpmnElement="B3_reject"><dc:Bounds x="625" y="383" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_rejectEnd" bpmnElement="B3_rejectEnd"><dc:Bounds x="856" y="396" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="797" y="436" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_type" bpmnElement="B3_type" isMarkerVisible="true"><dc:Bounds x="673" y="637" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="620" y="689" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_cod" bpmnElement="B3_cod"><dc:Bounds x="802" y="559" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_codOk" bpmnElement="B3_codOk" isMarkerVisible="true"><dc:Bounds x="1027" y="566" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="974" y="618" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_confirm" bpmnElement="B3_confirm"><dc:Bounds x="1156" y="488" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_qrCheck" bpmnElement="B3_qrCheck"><dc:Bounds x="802" y="630" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_qrOk" bpmnElement="B3_qrOk" isMarkerVisible="true"><dc:Bounds x="1027" y="637" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="974" y="689" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_invoice" bpmnElement="B3_invoice"><dc:Bounds x="979" y="1019" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_invoiceOk" bpmnElement="B3_invoiceOk" isMarkerVisible="true"><dc:Bounds x="1204" y="1026" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1151" y="1078" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_invoicePay" bpmnElement="B3_invoicePay"><dc:Bounds x="1333" y="1019" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_invoiceEnd" bpmnElement="B3_invoiceEnd"><dc:Bounds x="1564" y="1032" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1505" y="1072" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_bankCheck" bpmnElement="B3_bankCheck"><dc:Bounds x="1333" y="630" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_bankOk" bpmnElement="B3_bankOk" isMarkerVisible="true"><dc:Bounds x="1558" y="637" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1505" y="689" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_pending" bpmnElement="B3_pending" isMarkerVisible="true"><dc:Bounds x="1735" y="708" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1682" y="760" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_wait" bpmnElement="B3_wait"><dc:Bounds x="1912" y="319" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1859" y="371" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_gotBank" bpmnElement="B3_gotBank"><dc:Bounds x="2095" y="325" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2036" y="365" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_due" bpmnElement="B3_due"><dc:Bounds x="2095" y="396" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2036" y="436" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_compare" bpmnElement="B3_compare"><dc:Bounds x="2041" y="630" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_matched" bpmnElement="B3_matched" isMarkerVisible="true"><dc:Bounds x="2266" y="637" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="2213" y="689" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_post" bpmnElement="B3_post"><dc:Bounds x="2395" y="630" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_ok" bpmnElement="B3_ok"><dc:Bounds x="2626" y="643" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2567" y="683" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_case" bpmnElement="B3_case"><dc:Bounds x="2218" y="948" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_investigate" bpmnElement="B3_investigate"><dc:Bounds x="2395" y="948" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_updated" bpmnElement="B3_updated" isMarkerVisible="true"><dc:Bounds x="2620" y="955" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="2567" y="1007" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_record" bpmnElement="B3_record"><dc:Bounds x="2749" y="948" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_open" bpmnElement="B3_open"><dc:Bounds x="2803" y="1032" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2744" y="1072" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_saveBank" bpmnElement="B3_saveBank"><dc:Bounds x="2218" y="312" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_confirmed" bpmnElement="B3_confirmed" isMarkerVisible="true"><dc:Bounds x="1204" y="566" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1151" y="618" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_Data_Statement" bpmnElement="B3_Data_Statement"><dc:Bounds x="2166" y="732" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="2115" y="783" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_Data_CarrierInvoice" bpmnElement="B3_Data_CarrierInvoice"><dc:Bounds x="1104" y="975" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1053" y="1026" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_Data_ReconciliationCase" bpmnElement="B3_Data_ReconciliationCase"><dc:Bounds x="2343" y="1050" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="2292" y="1101" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B3_Di_Data_PaymentEntry" bpmnElement="B3_Data_PaymentEntry"><dc:Bounds x="2520" y="732" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="2469" y="783" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_1" bpmnElement="B3_Flow_1"><di:waypoint x="184" y="272"/><di:waypoint x="254" y="272"/><di:waypoint x="254" y="343"/><di:waypoint x="271" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_2" bpmnElement="B3_Flow_2"><di:waypoint x="184" y="343"/><di:waypoint x="271" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_3" bpmnElement="B3_Flow_3"><di:waypoint x="184" y="414"/><di:waypoint x="254" y="414"/><di:waypoint x="254" y="343"/><di:waypoint x="271" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_4" bpmnElement="B3_Flow_4"><di:waypoint x="415" y="343"/><di:waypoint x="496" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_5" bpmnElement="B3_Flow_5"><di:waypoint x="544" y="343"/><di:waypoint x="613" y="343"/><di:waypoint x="613" y="661"/><di:waypoint x="673" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_6" bpmnElement="B3_Flow_6"><di:waypoint x="544" y="343"/><di:waypoint x="608" y="343"/><di:waypoint x="608" y="414"/><di:waypoint x="625" y="414"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_7" bpmnElement="B3_Flow_7"><di:waypoint x="769" y="414"/><di:waypoint x="856" y="414"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_8" bpmnElement="B3_Flow_8"><di:waypoint x="721" y="661"/><di:waypoint x="785" y="661"/><di:waypoint x="785" y="590"/><di:waypoint x="802" y="590"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_9" bpmnElement="B3_Flow_9"><di:waypoint x="721" y="661"/><di:waypoint x="802" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_10" bpmnElement="B3_Flow_10"><di:waypoint x="721" y="661"/><di:waypoint x="738" y="661"/><di:waypoint x="738" y="1050"/><di:waypoint x="979" y="1050"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_11" bpmnElement="B3_Flow_11"><di:waypoint x="946" y="590"/><di:waypoint x="1027" y="590"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_12" bpmnElement="B3_Flow_12"><di:waypoint x="1075" y="590"/><di:waypoint x="1204" y="590"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_13" bpmnElement="B3_Flow_13"><di:waypoint x="1075" y="590"/><di:waypoint x="1092" y="590"/><di:waypoint x="1092" y="963"/><di:waypoint x="2201" y="963"/><di:waypoint x="2201" y="979"/><di:waypoint x="2218" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_14" bpmnElement="B3_Flow_14"><di:waypoint x="1300" y="519"/><di:waypoint x="1316" y="519"/><di:waypoint x="1316" y="661"/><di:waypoint x="1333" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_15" bpmnElement="B3_Flow_15"><di:waypoint x="946" y="661"/><di:waypoint x="1027" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_16" bpmnElement="B3_Flow_16"><di:waypoint x="1075" y="661"/><di:waypoint x="1333" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_17" bpmnElement="B3_Flow_17"><di:waypoint x="1051" y="685"/><di:waypoint x="1051" y="943"/><di:waypoint x="2201" y="943"/><di:waypoint x="2201" y="979"/><di:waypoint x="2218" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_18" bpmnElement="B3_Flow_18"><di:waypoint x="1123" y="1050"/><di:waypoint x="1204" y="1050"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_19" bpmnElement="B3_Flow_19"><di:waypoint x="1252" y="1050"/><di:waypoint x="1333" y="1050"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_20" bpmnElement="B3_Flow_20"><di:waypoint x="1252" y="1050"/><di:waypoint x="1269" y="1050"/><di:waypoint x="1269" y="979"/><di:waypoint x="2218" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_21" bpmnElement="B3_Flow_21"><di:waypoint x="1477" y="1050"/><di:waypoint x="1564" y="1050"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_22" bpmnElement="B3_Flow_22"><di:waypoint x="1477" y="661"/><di:waypoint x="1558" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_23" bpmnElement="B3_Flow_23"><di:waypoint x="1606" y="661"/><di:waypoint x="2041" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_24" bpmnElement="B3_Flow_24"><di:waypoint x="1606" y="661"/><di:waypoint x="1718" y="661"/><di:waypoint x="1718" y="732"/><di:waypoint x="1735" y="732"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_25" bpmnElement="B3_Flow_25"><di:waypoint x="1783" y="732"/><di:waypoint x="2154" y="732"/><di:waypoint x="2154" y="979"/><di:waypoint x="2218" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_26" bpmnElement="B3_Flow_26"><di:waypoint x="1783" y="732"/><di:waypoint x="1895" y="732"/><di:waypoint x="1895" y="343"/><di:waypoint x="1912" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_27" bpmnElement="B3_Flow_27"><di:waypoint x="1960" y="343"/><di:waypoint x="2095" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_28" bpmnElement="B3_Flow_28"><di:waypoint x="1960" y="343"/><di:waypoint x="1977" y="343"/><di:waypoint x="1977" y="414"/><di:waypoint x="2095" y="414"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_29" bpmnElement="B3_Flow_29"><di:waypoint x="2131" y="343"/><di:waypoint x="2218" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_30" bpmnElement="B3_Flow_30"><di:waypoint x="2095" y="414"/><di:waypoint x="2078" y="414"/><di:waypoint x="2078" y="620"/><di:waypoint x="1494" y="620"/><di:waypoint x="1494" y="661"/><di:waypoint x="1477" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_31" bpmnElement="B3_Flow_31"><di:waypoint x="2185" y="661"/><di:waypoint x="2266" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_32" bpmnElement="B3_Flow_32"><di:waypoint x="2314" y="661"/><di:waypoint x="2395" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_33" bpmnElement="B3_Flow_33"><di:waypoint x="2290" y="685"/><di:waypoint x="2290" y="948"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_34" bpmnElement="B3_Flow_34"><di:waypoint x="2539" y="661"/><di:waypoint x="2626" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_35" bpmnElement="B3_Flow_35"><di:waypoint x="2362" y="979"/><di:waypoint x="2395" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_36" bpmnElement="B3_Flow_36"><di:waypoint x="2539" y="979"/><di:waypoint x="2620" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_37" bpmnElement="B3_Flow_37"><di:waypoint x="2668" y="979"/><di:waypoint x="2749" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_38" bpmnElement="B3_Flow_38"><di:waypoint x="2668" y="979"/><di:waypoint x="2685" y="979"/><di:waypoint x="2685" y="1050"/><di:waypoint x="2803" y="1050"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_39" bpmnElement="B3_Flow_39"><di:waypoint x="2749" y="979"/><di:waypoint x="2732" y="979"/><di:waypoint x="2732" y="792"/><di:waypoint x="697" y="792"/><di:waypoint x="697" y="685"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_40" bpmnElement="B3_Flow_40"><di:waypoint x="2218" y="343"/><di:waypoint x="2201" y="343"/><di:waypoint x="2201" y="618"/><di:waypoint x="1489" y="618"/><di:waypoint x="1489" y="661"/><di:waypoint x="1477" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_41" bpmnElement="B3_Flow_41"><di:waypoint x="1252" y="590"/><di:waypoint x="1317" y="590"/><di:waypoint x="1317" y="661"/><di:waypoint x="1333" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_Flow_42" bpmnElement="B3_Flow_42"><di:waypoint x="1252" y="590"/><di:waypoint x="1269" y="590"/><di:waypoint x="1269" y="562"/><di:waypoint x="1317" y="562"/><di:waypoint x="1317" y="519"/><di:waypoint x="1300" y="519"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_MsgFlow_1" bpmnElement="B3_MsgFlow_1"><di:waypoint x="156" y="108"/><di:waypoint x="156" y="125"/><di:waypoint x="166" y="125"/><di:waypoint x="166" y="237"/><di:waypoint x="166" y="254"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_MsgFlow_2" bpmnElement="B3_MsgFlow_2"><di:waypoint x="1012" y="108"/><di:waypoint x="1012" y="132"/><di:waypoint x="255" y="132"/><di:waypoint x="255" y="343"/><di:waypoint x="201" y="343"/><di:waypoint x="184" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_MsgFlow_3" bpmnElement="B3_MsgFlow_3"><di:waypoint x="265" y="108"/><di:waypoint x="265" y="139"/><di:waypoint x="255" y="139"/><di:waypoint x="255" y="414"/><di:waypoint x="201" y="414"/><di:waypoint x="184" y="414"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_MsgFlow_4" bpmnElement="B3_MsgFlow_4"><di:waypoint x="1228" y="488"/><di:waypoint x="1228" y="471"/><di:waypoint x="1228" y="125"/><di:waypoint x="924" y="125"/><di:waypoint x="924" y="108"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_MsgFlow_5" bpmnElement="B3_MsgFlow_5"><di:waypoint x="2113" y="108"/><di:waypoint x="2113" y="132"/><di:waypoint x="2113" y="308"/><di:waypoint x="2113" y="325"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_DataAssoc_1" bpmnElement="B3_DataAssoc_1"><di:waypoint x="2184" y="732"/><di:waypoint x="2184" y="712"/><di:waypoint x="2113" y="712"/><di:waypoint x="2113" y="692"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_DataAssoc_2" bpmnElement="B3_DataAssoc_2"><di:waypoint x="1122" y="1023"/><di:waypoint x="1122" y="1021"/><di:waypoint x="1051" y="1021"/><di:waypoint x="1051" y="1019"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_DataAssoc_3" bpmnElement="B3_DataAssoc_3"><di:waypoint x="2290" y="1010"/><di:waypoint x="2290" y="1030"/><di:waypoint x="2361" y="1030"/><di:waypoint x="2361" y="1050"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_Di_DataAssoc_4" bpmnElement="B3_DataAssoc_4"><di:waypoint x="2467" y="692"/><di:waypoint x="2467" y="712"/><di:waypoint x="2538" y="712"/><di:waypoint x="2538" y="732"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

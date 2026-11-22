@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="B1_Definitions" targetNamespace="https://sme-o2c.example/bpmn" exporter="IT4350 SME O2C">
+  <bpmn:message id="B1_Message_1" name="Đơn hàng"/>
+  <bpmn:message id="B1_Message_2" name="Yêu cầu tạo QR"/>
+  <bpmn:message id="B1_Message_3" name="Mã QR và tham chiếu"/>
+  <bpmn:message id="B1_Message_4" name="Mã QR cho khách"/>
+  <bpmn:message id="B1_Message_5" name="Kết quả thanh toán QR"/>
+  <bpmn:message id="B1_Message_6" name="Yêu cầu vận đơn và số COD"/>
+  <bpmn:message id="B1_Message_7" name="Mã vận đơn"/>
+  <bpmn:message id="B1_Message_8" name="Kết quả giao và số COD"/>
+  <bpmn:collaboration id="B1_Collaboration" name="BPMN-01 — Đặt đơn, thanh toán và giao hàng">
+    <bpmn:participant id="B1_shop" name="Shop SME" processRef="B1_Process"/>
+    <bpmn:participant id="B1_buyer" name="Khách hàng"/>
+    <bpmn:participant id="B1_qr" name="Ngân hàng/Đơn vị cung cấp thanh toán QR"/>
+    <bpmn:participant id="B1_carrier" name="Đơn vị vận chuyển"/>
+    <bpmn:messageFlow id="B1_MsgFlow_1" name="Đơn hàng" sourceRef="B1_buyer" targetRef="B1_start"/>
+    <bpmn:messageFlow id="B1_MsgFlow_2" name="Yêu cầu tạo QR" sourceRef="B1_requestQr" targetRef="B1_qr"/>
+    <bpmn:messageFlow id="B1_MsgFlow_3" name="Mã QR và tham chiếu" sourceRef="B1_qr" targetRef="B1_gotQr"/>
+    <bpmn:messageFlow id="B1_MsgFlow_4" name="Mã QR cho khách" sourceRef="B1_showQr" targetRef="B1_buyer"/>
+    <bpmn:messageFlow id="B1_MsgFlow_5" name="Kết quả thanh toán QR" sourceRef="B1_qr" targetRef="B1_paid"/>
+    <bpmn:messageFlow id="B1_MsgFlow_6" name="Yêu cầu vận đơn và số COD" sourceRef="B1_shipRequest" targetRef="B1_carrier"/>
+    <bpmn:messageFlow id="B1_MsgFlow_7" name="Mã vận đơn" sourceRef="B1_carrier" targetRef="B1_tracking"/>
+    <bpmn:messageFlow id="B1_MsgFlow_8" name="Kết quả giao và số COD" sourceRef="B1_carrier" targetRef="B1_delivery"/>
+  </bpmn:collaboration>
+  <bpmn:process id="B1_Process" name="BPMN-01 — Đặt đơn, thanh toán và giao hàng" isExecutable="false">
+    <bpmn:laneSet id="B1_LaneSet">
+      <bpmn:lane id="B1_Lane_order" name="Tiếp nhận đơn">
+        <bpmn:flowNodeRef>B1_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_validate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_confirm</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="B1_Lane_stock" name="Kho">
+        <bpmn:flowNodeRef>B1_reserve</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_stockOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_noStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_pack</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_handover</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="B1_Lane_pay" name="Thanh toán">
+        <bpmn:flowNodeRef>B1_method</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_expected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_requestQr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_gotQr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_showQr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_waitQr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_paid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_expired</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_cancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_endExpired</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_postQr</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="B1_Lane_ship" name="Điều phối vận chuyển">
+        <bpmn:flowNodeRef>B1_shipRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_tracking</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_delivery</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_deliveryOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_recordGood</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_endGood</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_recordBad</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B1_endBad</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:dataObject id="B1_Object_Order" name="Order (đơn hàng)"/>
+    <bpmn:dataObjectReference id="B1_Data_Order" name="Order (đơn hàng)" dataObjectRef="B1_Object_Order"/>
+    <bpmn:dataObject id="B1_Object_Reservation" name="Reservation (giữ chỗ)"/>
+    <bpmn:dataObjectReference id="B1_Data_Reservation" name="Reservation (giữ chỗ)" dataObjectRef="B1_Object_Reservation"/>
+    <bpmn:dataObject id="B1_Object_Shipment" name="Shipment (vận đơn)"/>
+    <bpmn:dataObjectReference id="B1_Data_Shipment" name="Shipment (vận đơn)" dataObjectRef="B1_Object_Shipment"/>
+    <bpmn:dataObject id="B1_Object_ShipmentEvent" name="ShipmentEvent (lần giao)"/>
+    <bpmn:dataObjectReference id="B1_Data_ShipmentEvent" name="ShipmentEvent (lần giao)" dataObjectRef="B1_Object_ShipmentEvent"/>
+    <bpmn:dataObject id="B1_Object_PaymentEntry" name="PaymentEntry (QR đã trả)"/>
+    <bpmn:dataObjectReference id="B1_Data_PaymentEntry" name="PaymentEntry (QR đã trả)" dataObjectRef="B1_Object_PaymentEntry"/>
+    <bpmn:startEvent id="B1_start" name="Đã nhận đơn">
+      <bpmn:outgoing>B1_Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B1_EventDef_start" messageRef="B1_Message_1"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="B1_validate" name="Kiểm tra và ghi đơn">
+      <bpmn:incoming>B1_Flow_1</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_2</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B1_IO_Order" name="Order (đơn hàng)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B1_IO_Order</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B1_DataAssoc_1"><bpmn:sourceRef>B1_IO_Order</bpmn:sourceRef><bpmn:targetRef>B1_Data_Order</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="B1_reserve" name="Kiểm tra và giữ hàng">
+      <bpmn:incoming>B1_Flow_2</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_3</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B1_IO_Reservation" name="Reservation (giữ chỗ)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B1_IO_Reservation</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B1_DataAssoc_2"><bpmn:sourceRef>B1_IO_Reservation</bpmn:sourceRef><bpmn:targetRef>B1_Data_Reservation</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="B1_stockOk" name="Giữ hàng được?" default="B1_Flow_5">
+      <bpmn:incoming>B1_Flow_3</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_4</bpmn:outgoing>
+      <bpmn:outgoing>B1_Flow_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="B1_noStock" name="Đơn hết tồn">
+      <bpmn:incoming>B1_Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="B1_method" name="Phương thức thanh toán?">
+      <bpmn:incoming>B1_Flow_4</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_6</bpmn:outgoing>
+      <bpmn:outgoing>B1_Flow_7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B1_expected" name="Ghi số COD dự kiến thu">
+      <bpmn:incoming>B1_Flow_6</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="B1_requestQr" name="Yêu cầu tạo mã QR" messageRef="B1_Message_2">
+      <bpmn:incoming>B1_Flow_7</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_9</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="B1_gotQr" name="Đã nhận mã QR">
+      <bpmn:incoming>B1_Flow_9</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_10</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B1_EventDef_gotQr" messageRef="B1_Message_3"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="B1_showQr" name="Hiển thị QR cho khách" messageRef="B1_Message_4">
+      <bpmn:incoming>B1_Flow_10</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_11</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:eventBasedGateway id="B1_waitQr" name="Chờ thanh toán hoặc hết hạn">
+      <bpmn:incoming>B1_Flow_11</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_12</bpmn:outgoing>
+      <bpmn:outgoing>B1_Flow_13</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="B1_paid" name="Đã xác nhận thanh toán QR">
+      <bpmn:incoming>B1_Flow_12</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_14</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B1_EventDef_paid" messageRef="B1_Message_5"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="B1_expired" name="Hết hạn QR">
+      <bpmn:incoming>B1_Flow_13</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_16</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="B1_EventDef_expired"><bpmn:timeDate xsi:type="bpmn:tFormalExpression">qrExpiresAt</bpmn:timeDate></bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="B1_cancel" name="Hủy đơn và giải phóng giữ chỗ">
+      <bpmn:incoming>B1_Flow_16</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_17</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="B1_endExpired" name="Đơn QR hết hạn">
+      <bpmn:incoming>B1_Flow_17</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="B1_postQr" name="Ghi nhận đã thanh toán QR">
+      <bpmn:incoming>B1_Flow_14</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_15</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B1_IO_PaymentEntry" name="PaymentEntry (QR đã trả)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B1_IO_PaymentEntry</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B1_DataAssoc_5"><bpmn:sourceRef>B1_IO_PaymentEntry</bpmn:sourceRef><bpmn:targetRef>B1_Data_PaymentEntry</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="B1_confirm" name="Xác nhận đơn">
+      <bpmn:incoming>B1_Flow_8</bpmn:incoming>
+      <bpmn:incoming>B1_Flow_15</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_18</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:manualTask id="B1_pack" name="Lấy và đóng gói hàng">
+      <bpmn:incoming>B1_Flow_18</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_19</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="B1_shipRequest" name="Gửi yêu cầu tạo vận đơn" messageRef="B1_Message_6">
+      <bpmn:incoming>B1_Flow_19</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_20</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="B1_tracking" name="Đã nhận mã vận đơn">
+      <bpmn:incoming>B1_Flow_20</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_21</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B1_EventDef_tracking" messageRef="B1_Message_7"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="B1_handover" name="Bàn giao kiện và ghi xuất kho">
+      <bpmn:incoming>B1_Flow_21</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_22</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:intermediateCatchEvent id="B1_delivery" name="Đã nhận kết quả giao">
+      <bpmn:incoming>B1_Flow_22</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_23</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B1_EventDef_delivery" messageRef="B1_Message_8"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="B1_deliveryOk" name="Giao thành công?" default="B1_Flow_25">
+      <bpmn:incoming>B1_Flow_23</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_24</bpmn:outgoing>
+      <bpmn:outgoing>B1_Flow_25</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B1_recordGood" name="Ghi đã giao và COD đã thu">
+      <bpmn:incoming>B1_Flow_24</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_26</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B1_IO_Shipment" name="Shipment (vận đơn)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B1_IO_Shipment</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B1_DataAssoc_3"><bpmn:sourceRef>B1_IO_Shipment</bpmn:sourceRef><bpmn:targetRef>B1_Data_Shipment</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="B1_endGood" name="Đơn đã giao">
+      <bpmn:incoming>B1_Flow_26</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="B1_recordBad" name="Ghi lần giao thất bại">
+      <bpmn:incoming>B1_Flow_25</bpmn:incoming>
+      <bpmn:outgoing>B1_Flow_27</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B1_IO_ShipmentEvent" name="ShipmentEvent (lần giao)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B1_IO_ShipmentEvent</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B1_DataAssoc_4"><bpmn:sourceRef>B1_IO_ShipmentEvent</bpmn:sourceRef><bpmn:targetRef>B1_Data_ShipmentEvent</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="B1_endBad" name="Chuyển BPMN-02">
+      <bpmn:incoming>B1_Flow_27</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="B1_Flow_1" sourceRef="B1_start" targetRef="B1_validate"/>
+    <bpmn:sequenceFlow id="B1_Flow_2" sourceRef="B1_validate" targetRef="B1_reserve"/>
+    <bpmn:sequenceFlow id="B1_Flow_3" sourceRef="B1_reserve" targetRef="B1_stockOk"/>
+    <bpmn:sequenceFlow id="B1_Flow_4" name="Có" sourceRef="B1_stockOk" targetRef="B1_method"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B1_Flow_5" name="Không" sourceRef="B1_stockOk" targetRef="B1_noStock"/>
+    <bpmn:sequenceFlow id="B1_Flow_6" name="COD" sourceRef="B1_method" targetRef="B1_expected"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">COD</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B1_Flow_7" name="QR" sourceRef="B1_method" targetRef="B1_requestQr"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">QR</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B1_Flow_8" sourceRef="B1_expected" targetRef="B1_confirm"/>
+    <bpmn:sequenceFlow id="B1_Flow_9" sourceRef="B1_requestQr" targetRef="B1_gotQr"/>
+    <bpmn:sequenceFlow id="B1_Flow_10" sourceRef="B1_gotQr" targetRef="B1_showQr"/>
+    <bpmn:sequenceFlow id="B1_Flow_11" sourceRef="B1_showQr" targetRef="B1_waitQr"/>
+    <bpmn:sequenceFlow id="B1_Flow_12" sourceRef="B1_waitQr" targetRef="B1_paid"/>
+    <bpmn:sequenceFlow id="B1_Flow_13" sourceRef="B1_waitQr" targetRef="B1_expired"/>
+    <bpmn:sequenceFlow id="B1_Flow_14" sourceRef="B1_paid" targetRef="B1_postQr"/>
+    <bpmn:sequenceFlow id="B1_Flow_15" sourceRef="B1_postQr" targetRef="B1_confirm"/>
+    <bpmn:sequenceFlow id="B1_Flow_16" sourceRef="B1_expired" targetRef="B1_cancel"/>
+    <bpmn:sequenceFlow id="B1_Flow_17" sourceRef="B1_cancel" targetRef="B1_endExpired"/>
+    <bpmn:sequenceFlow id="B1_Flow_18" sourceRef="B1_confirm" targetRef="B1_pack"/>
+    <bpmn:sequenceFlow id="B1_Flow_19" sourceRef="B1_pack" targetRef="B1_shipRequest"/>
+    <bpmn:sequenceFlow id="B1_Flow_20" sourceRef="B1_shipRequest" targetRef="B1_tracking"/>
+    <bpmn:sequenceFlow id="B1_Flow_21" sourceRef="B1_tracking" targetRef="B1_handover"/>
+    <bpmn:sequenceFlow id="B1_Flow_22" sourceRef="B1_handover" targetRef="B1_delivery"/>
+    <bpmn:sequenceFlow id="B1_Flow_23" sourceRef="B1_delivery" targetRef="B1_deliveryOk"/>
+    <bpmn:sequenceFlow id="B1_Flow_24" name="Có" sourceRef="B1_deliveryOk" targetRef="B1_recordGood"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B1_Flow_25" name="Không" sourceRef="B1_deliveryOk" targetRef="B1_recordBad"/>
+    <bpmn:sequenceFlow id="B1_Flow_26" sourceRef="B1_recordGood" targetRef="B1_endGood"/>
+    <bpmn:sequenceFlow id="B1_Flow_27" sourceRef="B1_recordBad" targetRef="B1_endBad"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="B1_Diagram" name="BPMN-01 — Đặt đơn, thanh toán và giao hàng">
+    <bpmndi:BPMNPlane id="B1_Plane" bpmnElement="B1_Collaboration">
+      <bpmndi:BPMNShape id="B1_Di_shop" bpmnElement="B1_shop" isHorizontal="true"><dc:Bounds x="30" y="170" width="3600" height="1324"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_buyer" bpmnElement="B1_buyer" isHorizontal="true"><dc:Bounds x="87" y="48" width="509" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_qr" bpmnElement="B1_qr" isHorizontal="true"><dc:Bounds x="1149" y="48" width="863" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_carrier" bpmnElement="B1_carrier" isHorizontal="true"><dc:Bounds x="2388" y="48" width="1040" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Lane_order" bpmnElement="B1_Lane_order" isHorizontal="true"><dc:Bounds x="59" y="170" width="3571" height="322"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Lane_stock" bpmnElement="B1_Lane_stock" isHorizontal="true"><dc:Bounds x="59" y="492" width="3571" height="322"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Lane_pay" bpmnElement="B1_Lane_pay" isHorizontal="true"><dc:Bounds x="59" y="814" width="3571" height="322"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Lane_ship" bpmnElement="B1_Lane_ship" isHorizontal="true"><dc:Bounds x="59" y="1136" width="3571" height="358"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_start" bpmnElement="B1_start"><dc:Bounds x="148" y="290" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="89" y="330" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_validate" bpmnElement="B1_validate"><dc:Bounds x="271" y="277" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_reserve" bpmnElement="B1_reserve"><dc:Bounds x="448" y="599" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_stockOk" bpmnElement="B1_stockOk" isMarkerVisible="true"><dc:Bounds x="673" y="606" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="620" y="658" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_noStock" bpmnElement="B1_noStock"><dc:Bounds x="856" y="704" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="797" y="744" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_method" bpmnElement="B1_method" isMarkerVisible="true"><dc:Bounds x="850" y="928" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="797" y="980" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_expected" bpmnElement="B1_expected"><dc:Bounds x="1068" y="829" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_requestQr" bpmnElement="B1_requestQr"><dc:Bounds x="979" y="921" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_gotQr" bpmnElement="B1_gotQr"><dc:Bounds x="1210" y="934" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1151" y="974" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_showQr" bpmnElement="B1_showQr"><dc:Bounds x="1333" y="921" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_waitQr" bpmnElement="B1_waitQr"><dc:Bounds x="1558" y="928" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1505" y="980" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_paid" bpmnElement="B1_paid"><dc:Bounds x="1741" y="934" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1682" y="974" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_expired" bpmnElement="B1_expired"><dc:Bounds x="1741" y="1026" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1682" y="1066" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_cancel" bpmnElement="B1_cancel"><dc:Bounds x="1864" y="1013" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_endExpired" bpmnElement="B1_endExpired"><dc:Bounds x="2095" y="1026" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2036" y="1066" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_postQr" bpmnElement="B1_postQr"><dc:Bounds x="1864" y="921" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_confirm" bpmnElement="B1_confirm"><dc:Bounds x="2041" y="277" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_pack" bpmnElement="B1_pack"><dc:Bounds x="2218" y="599" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_shipRequest" bpmnElement="B1_shipRequest"><dc:Bounds x="2395" y="1243" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_tracking" bpmnElement="B1_tracking"><dc:Bounds x="2626" y="1256" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2567" y="1296" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_handover" bpmnElement="B1_handover"><dc:Bounds x="2749" y="599" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_delivery" bpmnElement="B1_delivery"><dc:Bounds x="2980" y="1256" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2921" y="1296" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_deliveryOk" bpmnElement="B1_deliveryOk" isMarkerVisible="true"><dc:Bounds x="3151" y="1250" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="3098" y="1302" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_recordGood" bpmnElement="B1_recordGood"><dc:Bounds x="3280" y="1243" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_endGood" bpmnElement="B1_endGood"><dc:Bounds x="3511" y="1256" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="3452" y="1296" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_recordBad" bpmnElement="B1_recordBad"><dc:Bounds x="3280" y="1335" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_endBad" bpmnElement="B1_endBad"><dc:Bounds x="3511" y="1348" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="3452" y="1388" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Data_Order" bpmnElement="B1_Data_Order"><dc:Bounds x="396" y="373" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="345" y="424" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Data_Reservation" bpmnElement="B1_Data_Reservation"><dc:Bounds x="573" y="695" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="522" y="746" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Data_Shipment" bpmnElement="B1_Data_Shipment"><dc:Bounds x="3405" y="1163" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="3354" y="1214" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Data_ShipmentEvent" bpmnElement="B1_Data_ShipmentEvent"><dc:Bounds x="3387" y="1400" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="3336" y="1451" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B1_Di_Data_PaymentEntry" bpmnElement="B1_Data_PaymentEntry"><dc:Bounds x="1989" y="841" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1938" y="892" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_1" bpmnElement="B1_Flow_1"><di:waypoint x="184" y="308"/><di:waypoint x="271" y="308"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_2" bpmnElement="B1_Flow_2"><di:waypoint x="415" y="308"/><di:waypoint x="520" y="308"/><di:waypoint x="520" y="599"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_3" bpmnElement="B1_Flow_3"><di:waypoint x="592" y="630"/><di:waypoint x="673" y="630"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_4" bpmnElement="B1_Flow_4"><di:waypoint x="697" y="654"/><di:waypoint x="697" y="952"/><di:waypoint x="850" y="952"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_5" bpmnElement="B1_Flow_5"><di:waypoint x="721" y="630"/><di:waypoint x="874" y="630"/><di:waypoint x="874" y="704"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_6" bpmnElement="B1_Flow_6"><di:waypoint x="874" y="928"/><di:waypoint x="874" y="860"/><di:waypoint x="1068" y="860"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_7" bpmnElement="B1_Flow_7"><di:waypoint x="898" y="952"/><di:waypoint x="979" y="952"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_8" bpmnElement="B1_Flow_8"><di:waypoint x="1140" y="829"/><di:waypoint x="1140" y="819"/><di:waypoint x="2006" y="819"/><di:waypoint x="2006" y="308"/><di:waypoint x="2041" y="308"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_9" bpmnElement="B1_Flow_9"><di:waypoint x="1123" y="952"/><di:waypoint x="1210" y="952"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_10" bpmnElement="B1_Flow_10"><di:waypoint x="1246" y="952"/><di:waypoint x="1333" y="952"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_11" bpmnElement="B1_Flow_11"><di:waypoint x="1477" y="952"/><di:waypoint x="1558" y="952"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_12" bpmnElement="B1_Flow_12"><di:waypoint x="1606" y="952"/><di:waypoint x="1741" y="952"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_13" bpmnElement="B1_Flow_13"><di:waypoint x="1582" y="976"/><di:waypoint x="1582" y="1044"/><di:waypoint x="1741" y="1044"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_14" bpmnElement="B1_Flow_14"><di:waypoint x="1777" y="952"/><di:waypoint x="1864" y="952"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_15" bpmnElement="B1_Flow_15"><di:waypoint x="2008" y="952"/><di:waypoint x="2113" y="952"/><di:waypoint x="2113" y="339"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_16" bpmnElement="B1_Flow_16"><di:waypoint x="1777" y="1044"/><di:waypoint x="1864" y="1044"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_17" bpmnElement="B1_Flow_17"><di:waypoint x="2008" y="1044"/><di:waypoint x="2095" y="1044"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_18" bpmnElement="B1_Flow_18"><di:waypoint x="2185" y="308"/><di:waypoint x="2201" y="308"/><di:waypoint x="2201" y="630"/><di:waypoint x="2218" y="630"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_19" bpmnElement="B1_Flow_19"><di:waypoint x="2362" y="630"/><di:waypoint x="2378" y="630"/><di:waypoint x="2378" y="1274"/><di:waypoint x="2395" y="1274"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_20" bpmnElement="B1_Flow_20"><di:waypoint x="2539" y="1274"/><di:waypoint x="2626" y="1274"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_21" bpmnElement="B1_Flow_21"><di:waypoint x="2662" y="1274"/><di:waypoint x="2732" y="1274"/><di:waypoint x="2732" y="630"/><di:waypoint x="2749" y="630"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_22" bpmnElement="B1_Flow_22"><di:waypoint x="2893" y="630"/><di:waypoint x="2963" y="630"/><di:waypoint x="2963" y="1274"/><di:waypoint x="2980" y="1274"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_23" bpmnElement="B1_Flow_23"><di:waypoint x="3016" y="1274"/><di:waypoint x="3151" y="1274"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_24" bpmnElement="B1_Flow_24"><di:waypoint x="3199" y="1274"/><di:waypoint x="3280" y="1274"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_25" bpmnElement="B1_Flow_25"><di:waypoint x="3175" y="1298"/><di:waypoint x="3175" y="1366"/><di:waypoint x="3280" y="1366"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_26" bpmnElement="B1_Flow_26"><di:waypoint x="3424" y="1274"/><di:waypoint x="3511" y="1274"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_Flow_27" bpmnElement="B1_Flow_27"><di:waypoint x="3424" y="1366"/><di:waypoint x="3511" y="1366"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_MsgFlow_1" bpmnElement="B1_MsgFlow_1"><di:waypoint x="156" y="108"/><di:waypoint x="156" y="125"/><di:waypoint x="166" y="125"/><di:waypoint x="166" y="273"/><di:waypoint x="166" y="290"/><bpmndi:BPMNLabel><dc:Bounds x="176" y="200" width="75" height="32"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_MsgFlow_2" bpmnElement="B1_MsgFlow_2"><di:waypoint x="1051" y="921"/><di:waypoint x="1051" y="904"/><di:waypoint x="1051" y="132"/><di:waypoint x="1189" y="132"/><di:waypoint x="1189" y="108"/><bpmndi:BPMNLabel><dc:Bounds x="1062" y="515" width="120" height="32"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_MsgFlow_3" bpmnElement="B1_MsgFlow_3"><di:waypoint x="1228" y="108"/><di:waypoint x="1228" y="934"/><bpmndi:BPMNLabel><dc:Bounds x="1237" y="558" width="152" height="32"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_MsgFlow_4" bpmnElement="B1_MsgFlow_4"><di:waypoint x="1405" y="921"/><di:waypoint x="1405" y="904"/><di:waypoint x="1405" y="125"/><di:waypoint x="570" y="125"/><di:waypoint x="570" y="108"/><bpmndi:BPMNLabel><dc:Bounds x="685" y="135" width="144" height="32"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_MsgFlow_5" bpmnElement="B1_MsgFlow_5"><di:waypoint x="1759" y="108"/><di:waypoint x="1759" y="132"/><di:waypoint x="1759" y="917"/><di:waypoint x="1759" y="934"/><bpmndi:BPMNLabel><dc:Bounds x="1769" y="516" width="160" height="32"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_MsgFlow_6" bpmnElement="B1_MsgFlow_6"><di:waypoint x="2467" y="1243"/><di:waypoint x="2467" y="1226"/><di:waypoint x="2467" y="139"/><di:waypoint x="2477" y="139"/><di:waypoint x="2477" y="108"/><bpmndi:BPMNLabel><dc:Bounds x="2478" y="657" width="130" height="32"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_MsgFlow_7" bpmnElement="B1_MsgFlow_7"><di:waypoint x="2634" y="108"/><di:waypoint x="2634" y="125"/><di:waypoint x="2644" y="125"/><di:waypoint x="2644" y="1239"/><di:waypoint x="2644" y="1256"/><bpmndi:BPMNLabel><dc:Bounds x="2655" y="690" width="105" height="32"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_MsgFlow_8" bpmnElement="B1_MsgFlow_8"><di:waypoint x="2998" y="108"/><di:waypoint x="2998" y="132"/><di:waypoint x="2998" y="1239"/><di:waypoint x="2998" y="1256"/><bpmndi:BPMNLabel><dc:Bounds x="3009" y="659" width="135" height="32"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_DataAssoc_1" bpmnElement="B1_DataAssoc_1"><di:waypoint x="343" y="339"/><di:waypoint x="343" y="356"/><di:waypoint x="414" y="356"/><di:waypoint x="414" y="373"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_DataAssoc_2" bpmnElement="B1_DataAssoc_2"><di:waypoint x="520" y="661"/><di:waypoint x="520" y="678"/><di:waypoint x="591" y="678"/><di:waypoint x="591" y="695"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_DataAssoc_3" bpmnElement="B1_DataAssoc_3"><di:waypoint x="3352" y="1243"/><di:waypoint x="3352" y="1227"/><di:waypoint x="3423" y="1227"/><di:waypoint x="3423" y="1211"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_DataAssoc_4" bpmnElement="B1_DataAssoc_4"><di:waypoint x="3352" y="1397"/><di:waypoint x="3352" y="1399"/><di:waypoint x="3405" y="1399"/><di:waypoint x="3405" y="1400"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B1_Di_DataAssoc_5" bpmnElement="B1_DataAssoc_5"><di:waypoint x="1936" y="921"/><di:waypoint x="1936" y="905"/><di:waypoint x="2007" y="905"/><di:waypoint x="2007" y="889"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,41 +1,88 @@
 flowchart LR
-  X0((Đến kỳ tháng)) --> X1[Nhận hồ sơ đối soát theo loại]
-  X1 --> X2[Hash file + kiểm schema/trùng batch]
-  X2 --> G0{Hợp lệ?}
-  G0 -- Không --> X3[Reject/quarantine file + thông báo] --> Xe((Kết thúc lỗi))
-  G0 -- Có --> Gt{Loại hồ sơ?}
-  Gt -- COD --> C6[ĐVVC gửi bảng kê các khoản shipper đã thu hộ]
-  C6 --> C1[Shop so số COD phải thu đủ điều kiện với bảng kê]
-  C1 --> C2{Sơ bộ khớp?}
-  C2 -- Có --> C3[Shop xác nhận bảng kê kỳ tháng]
-  C3 --> C5[ĐVVC chuyển COD còn phải chuyển vào tài khoản shop]
-  C5 --> C4[Shop kiểm tra sao kê theo mã kỳ hoặc mã chuyển khoản]
-  C4 --> X5[Đối chiếu ba nguồn và kiểm tra hạn chuyển]
-  C2 -- Không --> X7
-  Gt -- QR --> Q1[Match ledger ↔ QR statement ↔ bank credit]
-  Q1 --> X5
-  Gt -- Hóa đơn ĐVVC --> F1[So vận đơn + biểu phí ↔ hóa đơn]
-  F1 --> F2{Hóa đơn đúng?}
-  F2 -- Có --> F3[Phê duyệt và shop thanh toán riêng]
-  F2 -- Không --> X7[Tạo ReconciliationCase]
-  X5 --> G1{Kết quả?}
-  G1 -- Khớp --> X6[Ghi nhận tiền thực nhận]
-  G1 -- Chưa đến hạn, tiền chưa về --> C4
-  G1 -- Lệch tiền hoặc thiếu chứng từ quá hạn --> X7[Tạo hồ sơ chênh lệch]
-  X7 --> X8[Kế toán điều tra với chứng từ]
-  X8 --> G2{Resolution?}
-  G2 -- Đối tác sửa/chuyển bù --> X9[Ghi nhận remittance/credit bổ sung]
-  G2 -- Mapping sai nội bộ --> X10[Post adjustment có approval]
-  G2 -- Chưa xử lý --> X11[Giữ OPEN + aging/SLA]
-  X9 --> X12[Re-match]
-  X10 --> X12
-  X12 --> Gt
-  X6 --> X13[Cập nhật aging/dashboard]
-  F3 --> X13
-  X11 --> X13
-  X13 --> G3{Còn case mở?}
-  G3 -- Không --> X14[Close batch]
-  G3 -- Có --> X15[Close processing run, batch PARTIAL]
-  X14 --> Ee((Kết thúc))
-  X15 --> Ee
+  carrier["Đơn vị vận chuyển"]
+  qr["Đơn vị cung cấp thanh toán QR"]
+  bank["Ngân hàng nhận tiền của shop"]
+  subgraph shop["Shop SME"]
+    n_startCod(("Đã nhận bảng kê COD"))
+    n_startQr(("Đã nhận bảng kê QR"))
+    n_startInvoice(("Đã nhận hóa đơn vận chuyển"))
+    n_import["Nhập và kiểm tra hồ sơ"]
+    n_valid{"Hồ sơ hợp lệ?"}
+    n_reject["Ghi lỗi và yêu cầu bổ sung"]
+    n_rejectEnd(("Đã trả hồ sơ lỗi"))
+    n_type{"Loại hồ sơ?"}
+    n_cod["So COD theo đơn với bảng kê"]
+    n_codOk{"Bảng kê COD khớp?"}
+    n_confirm["Gửi xác nhận bảng kê COD"]
+    n_qrCheck["So giao dịch QR với bảng kê"]
+    n_qrOk{"Bảng kê QR khớp?"}
+    n_invoice["Kiểm hóa đơn phí theo vận đơn"]
+    n_invoiceOk{"Hóa đơn đúng?"}
+    n_invoicePay["Duyệt và ghi thanh toán phí riêng"]
+    n_invoiceEnd(("Đã xử lý hóa đơn phí"))
+    n_bankCheck["Tra chứng từ và hạn tiền về"]
+    n_bankOk{"Có chứng từ thực nhận?"}
+    n_pending{"Đã đến hạn chuyển tiền?"}
+    n_wait{"Chờ sao kê hoặc đến hạn"}
+    n_gotBank(("Đã nhận sao kê bổ sung"))
+    n_due(("Đã đến hạn đối soát"))
+    n_compare["Kiểm ba nguồn tiền"]
+    n_matched{"Ba nguồn khớp?"}
+    n_post["Ghi thực nhận và chốt đối soát"]
+    n_ok(("Đã chốt đối soát"))
+    n_case["Mở hoặc cập nhật hồ sơ chênh lệch"]
+    n_investigate["Xác minh với chứng từ và đối tác"]
+    n_updated{"Đủ chứng từ xử lý lại?"}
+    n_record["Lưu chứng từ đã xác minh"]
+    n_open(("Còn hồ sơ chênh lệch mở"))
+    n_saveBank["Lưu thông tin tiền vào theo mã tham chiếu"]
+    n_confirmed{"Đã gửi xác nhận cho kỳ này?"}
+    n_startCod --> n_import
+    n_startQr --> n_import
+    n_startInvoice --> n_import
+    n_import --> n_valid
+    n_valid -->|Có| n_type
+    n_valid -->|Không| n_reject
+    n_reject --> n_rejectEnd
+    n_type -->|Bảng kê COD| n_cod
+    n_type -->|Bảng kê QR| n_qrCheck
+    n_type -->|Hóa đơn phí| n_invoice
+    n_cod --> n_codOk
+    n_codOk -->|Có| n_confirmed
+    n_codOk -->|Không| n_case
+    n_confirm --> n_bankCheck
+    n_qrCheck --> n_qrOk
+    n_qrOk -->|Có| n_bankCheck
+    n_qrOk -->|Không| n_case
+    n_invoice --> n_invoiceOk
+    n_invoiceOk -->|Có| n_invoicePay
+    n_invoiceOk -->|Không| n_case
+    n_invoicePay --> n_invoiceEnd
+    n_bankCheck --> n_bankOk
+    n_bankOk -->|Có| n_compare
+    n_bankOk -->|Chưa có| n_pending
+    n_pending -->|Có| n_case
+    n_pending -->|Chưa đến hạn| n_wait
+    n_wait --> n_gotBank
+    n_wait --> n_due
+    n_gotBank --> n_saveBank
+    n_due --> n_bankCheck
+    n_compare --> n_matched
+    n_matched -->|Có| n_post
+    n_matched -->|Không| n_case
+    n_post --> n_ok
+    n_case --> n_investigate
+    n_investigate --> n_updated
+    n_updated -->|Có| n_record
+    n_updated -->|Chưa đủ| n_open
+    n_record --> n_type
+    n_saveBank --> n_bankCheck
+    n_confirmed -->|Đã gửi| n_bankCheck
+    n_confirmed -->|Chưa gửi| n_confirm
+  end
+  carrier -.->|Bảng kê COD theo kỳ| n_startCod
+  qr -.->|Bảng kê giao dịch QR| n_startQr
+  carrier -.->|Hóa đơn dịch vụ vận chuyển| n_startInvoice
+  n_confirm -.->|Xác nhận bảng kê COD theo kỳ| carrier
+  bank -.->|Sao kê hoặc thông báo tiền vào| n_gotBank
 

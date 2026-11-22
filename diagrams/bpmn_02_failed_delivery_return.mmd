@@ -1,34 +1,86 @@
-flowchart TD
-  E0((Message start)) --> G0{Loại sự kiện?}
-  G0 -- Giao thất bại --> A1[Ghi delivery attempt idempotent]
-  A1 --> G1{Còn lượt giao và khách đồng ý?}
-  G1 -- Có --> A2[Đặt lịch giao lại] --> Ea((Chờ lần giao mới))
-  G1 -- Không --> A3[Yêu cầu chuyển hoàn / Shipment RETURNING]
-  G0 -- Return/Exchange request --> B1[Kiểm tra eligibility]
-  B1 --> G2{Hợp lệ?}
-  G2 -- Không --> Bx[Từ chối, ghi lý do] --> Ex((Kết thúc))
-  G2 -- Có --> B2[Tạo RMA + hướng dẫn gửi hàng]
-  A3 --> C1[ĐVVC trả kiện]
-  B2 --> C1
-  C1 --> C2[Kho scan tracking/RMA, nhận vào QC]
-  C2 --> G3{QC result?}
-  G3 -- Bán lại được --> C3[StockEntry RESTOCK]
-  G3 -- Lỗi/hỏng --> C4[StockEntry QUARANTINE]
-  C3 --> G4{Nguồn và yêu cầu?}
-  C4 --> G4
-  G4 -- QR chưa giao/RTO hoặc trả hàng --> D1[Tạo refund theo approval]
-  G4 -- COD đã thu, trả hàng --> D2[Tạo nghĩa vụ hoàn tiền]
-  G4 -- Đổi hàng --> D3[Reserve SKU thay thế + tạo shipment mới]
-  G4 -- COD chuyển hoàn --> D9{Xác nhận chưa thu tiền?}
-  D9 -- Có --> D4[Ghi UNCOLLECTED và loại khỏi khoản phải chuyển]
-  D9 -- Đã thu hoặc chưa rõ --> D10[Chuyển kế toán xác minh COD]
-  D10 --> Ef((Chờ xử lý COD))
-  D1 --> D5[Nhận refund callback]
-  D2 --> D6[Record payout reference]
-  D3 --> D7[Link replacement order]
-  D4 --> D8[Đóng RMA/RTO]
-  D5 --> D8
-  D6 --> D8
-  D7 --> D8
-  D8 --> Ee((Kết thúc))
+flowchart LR
+  buyer["Khách hàng"]
+  carrier["Đơn vị vận chuyển"]
+  qr["Đơn vị cung cấp thanh toán QR"]
+  subgraph shop["Shop SME"]
+    n_startFail(("Đã nhận lần giao thất bại"))
+    n_record["Ghi hoặc tra ShipmentEvent"]
+    n_retryOk{"Còn lượt và khách đồng ý?"}
+    n_retry["Yêu cầu giao lại"]
+    n_retryResult(("Đã nhận kết quả giao lại"))
+    n_retryDone{"Giao lại thành công?"}
+    n_retrySuccess["Ghi đã giao và COD đã thu nếu có"]
+    n_retryEnd(("Giao lại thành công"))
+    n_rto["Yêu cầu chuyển hoàn"]
+    n_startReturn(("Đã nhận yêu cầu đổi/trả"))
+    n_eligibility["Kiểm tra điều kiện đổi/trả"]
+    n_eligible{"Yêu cầu hợp lệ?"}
+    n_reject["Ghi lý do và báo khách"]
+    n_rejectEnd(("Yêu cầu bị từ chối"))
+    n_rma["Lập RMA và gửi hướng dẫn"]
+    n_receive["Thực nhận và đối chiếu mã kiện"]
+    n_qc["Kiểm chất lượng hàng"]
+    n_qcOk{"Bán lại được?"}
+    n_restock["Ghi nhập lại hàng có thể bán"]
+    n_quarantine["Ghi đưa hàng vào khu cách ly"]
+    n_decision["Xác định hướng xử lý được duyệt"]
+    n_action{"Hướng xử lý?"}
+    n_uncoll["Ghi COD chưa thu"]
+    n_replacement["Giữ hàng thay thế và lập vận đơn"]
+    n_sendRefund["Gửi yêu cầu hoàn QR"]
+    n_refundResponse(("Đã nhận kết quả hoàn QR"))
+    n_refundOk{"Hoàn tiền thành công?"}
+    n_refundRecord["Ghi khoản hoàn QR"]
+    n_codRefund["Hoàn COD và ghi chứng từ chi"]
+    n_verify["Mở hồ sơ cần xác minh"]
+    n_pending(("Đã chuyển kế toán xác minh"))
+    n_close["Đóng hồ sơ hàng quay về"]
+    n_end(("Đã xử lý hàng quay về"))
+    n_startFail --> n_record
+    n_record --> n_retryOk
+    n_retryOk -->|Có| n_retry
+    n_retryOk -->|Không| n_rto
+    n_retry --> n_retryResult
+    n_retryResult --> n_retryDone
+    n_retryDone -->|Không| n_record
+    n_retryDone -->|Có| n_retrySuccess
+    n_retrySuccess --> n_retryEnd
+    n_rto --> n_receive
+    n_startReturn --> n_eligibility
+    n_eligibility --> n_eligible
+    n_eligible -->|Có| n_rma
+    n_eligible -->|Không| n_reject
+    n_reject --> n_rejectEnd
+    n_rma --> n_receive
+    n_receive --> n_qc
+    n_qc --> n_qcOk
+    n_qcOk -->|Có| n_restock
+    n_qcOk -->|Không| n_quarantine
+    n_restock --> n_decision
+    n_quarantine --> n_decision
+    n_decision --> n_action
+    n_action -->|Chuyển hoàn COD đã xác nhận chưa thu| n_uncoll
+    n_action -->|Đổi hàng được duyệt| n_replacement
+    n_action -->|Hoàn QR được duyệt| n_sendRefund
+    n_action -->|Trả sau giao COD đã thu, được duyệt| n_codRefund
+    n_action -->|Cần xác minh| n_verify
+    n_sendRefund --> n_refundResponse
+    n_refundResponse --> n_refundOk
+    n_refundOk -->|Có| n_refundRecord
+    n_refundOk -->|Không| n_verify
+    n_refundRecord --> n_close
+    n_uncoll --> n_close
+    n_replacement --> n_close
+    n_codRefund --> n_close
+    n_verify --> n_pending
+    n_close --> n_end
+  end
+  carrier -.->|Thông báo giao thất bại hoặc bị từ chối| n_startFail
+  n_retry -.->|Yêu cầu giao lại| carrier
+  carrier -.->|Kết quả giao lại| n_retryResult
+  n_rto -.->|Yêu cầu chuyển hoàn| carrier
+  buyer -.->|Yêu cầu đổi/trả sau giao| n_startReturn
+  n_rma -.->|Hồ sơ RMA và hướng dẫn| buyer
+  n_sendRefund -.->|Yêu cầu hoàn tiền| qr
+  qr -.->|Kết quả hoàn tiền| n_refundResponse
 

@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="B2_Definitions" targetNamespace="https://sme-o2c.example/bpmn" exporter="IT4350 SME O2C">
+  <bpmn:message id="B2_Message_1" name="Thông báo giao thất bại hoặc bị từ chối"/>
+  <bpmn:message id="B2_Message_2" name="Yêu cầu giao lại"/>
+  <bpmn:message id="B2_Message_3" name="Kết quả giao lại"/>
+  <bpmn:message id="B2_Message_4" name="Yêu cầu chuyển hoàn"/>
+  <bpmn:message id="B2_Message_5" name="Yêu cầu đổi/trả sau giao"/>
+  <bpmn:message id="B2_Message_6" name="Hồ sơ RMA và hướng dẫn"/>
+  <bpmn:message id="B2_Message_7" name="Yêu cầu hoàn tiền"/>
+  <bpmn:message id="B2_Message_8" name="Kết quả hoàn tiền"/>
+  <bpmn:collaboration id="B2_Collaboration" name="BPMN-02 — Giao thất bại, chuyển hoàn và đổi/trả">
+    <bpmn:participant id="B2_shop" name="Shop SME" processRef="B2_Process"/>
+    <bpmn:participant id="B2_buyer" name="Khách hàng"/>
+    <bpmn:participant id="B2_carrier" name="Đơn vị vận chuyển"/>
+    <bpmn:participant id="B2_qr" name="Đơn vị cung cấp thanh toán QR"/>
+    <bpmn:messageFlow id="B2_MsgFlow_1" name="Thông báo giao thất bại hoặc bị từ chối" sourceRef="B2_carrier" targetRef="B2_startFail" messageRef="B2_Message_1"/>
+    <bpmn:messageFlow id="B2_MsgFlow_2" name="Yêu cầu giao lại" sourceRef="B2_retry" targetRef="B2_carrier" messageRef="B2_Message_2"/>
+    <bpmn:messageFlow id="B2_MsgFlow_3" name="Kết quả giao lại" sourceRef="B2_carrier" targetRef="B2_retryResult" messageRef="B2_Message_3"/>
+    <bpmn:messageFlow id="B2_MsgFlow_4" name="Yêu cầu chuyển hoàn" sourceRef="B2_rto" targetRef="B2_carrier" messageRef="B2_Message_4"/>
+    <bpmn:messageFlow id="B2_MsgFlow_5" name="Yêu cầu đổi/trả sau giao" sourceRef="B2_buyer" targetRef="B2_startReturn" messageRef="B2_Message_5"/>
+    <bpmn:messageFlow id="B2_MsgFlow_6" name="Hồ sơ RMA và hướng dẫn" sourceRef="B2_rma" targetRef="B2_buyer" messageRef="B2_Message_6"/>
+    <bpmn:messageFlow id="B2_MsgFlow_7" name="Yêu cầu hoàn tiền" sourceRef="B2_sendRefund" targetRef="B2_qr" messageRef="B2_Message_7"/>
+    <bpmn:messageFlow id="B2_MsgFlow_8" name="Kết quả hoàn tiền" sourceRef="B2_qr" targetRef="B2_refundResponse" messageRef="B2_Message_8"/>
+  </bpmn:collaboration>
+  <bpmn:process id="B2_Process" name="BPMN-02 — Giao thất bại, chuyển hoàn và đổi/trả" isExecutable="false">
+    <bpmn:laneSet id="B2_LaneSet">
+      <bpmn:lane id="B2_Lane_ship" name="Điều phối và Bán hàng/CSKH">
+        <bpmn:flowNodeRef>B2_startFail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_record</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_retryOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_retry</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_retryResult</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_retryDone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_retrySuccess</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_retryEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_rto</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="B2_Lane_returns" name="Xử lý hàng quay về">
+        <bpmn:flowNodeRef>B2_startReturn</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_eligibility</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_eligible</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_reject</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_rejectEnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_rma</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_decision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_action</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_close</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_end</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="B2_Lane_stock" name="Kho">
+        <bpmn:flowNodeRef>B2_receive</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_qc</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_qcOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_restock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_quarantine</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_replacement</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="B2_Lane_pay" name="Thanh toán và kế toán">
+        <bpmn:flowNodeRef>B2_uncoll</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_sendRefund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_refundResponse</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_refundOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_refundRecord</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_codRefund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_verify</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>B2_pending</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:dataObject id="B2_Object_Return" name="Return/RMA (hồ sơ đổi/trả)"/>
+    <bpmn:dataObjectReference id="B2_Data_Return" name="Return/RMA (hồ sơ đổi/trả)" dataObjectRef="B2_Object_Return"/>
+    <bpmn:dataObject id="B2_Object_StockEntry" name="StockEntry (biến động tồn)"/>
+    <bpmn:dataObjectReference id="B2_Data_StockEntry" name="StockEntry (biến động tồn)" dataObjectRef="B2_Object_StockEntry"/>
+    <bpmn:dataObject id="B2_Object_ShipmentEvent" name="ShipmentEvent (lần giao)"/>
+    <bpmn:dataObjectReference id="B2_Data_ShipmentEvent" name="ShipmentEvent (lần giao)" dataObjectRef="B2_Object_ShipmentEvent"/>
+    <bpmn:dataObject id="B2_Object_PaymentEntry" name="PaymentEntry (tiền hoàn)"/>
+    <bpmn:dataObjectReference id="B2_Data_PaymentEntry" name="PaymentEntry (tiền hoàn)" dataObjectRef="B2_Object_PaymentEntry"/>
+    <bpmn:startEvent id="B2_startFail" name="Đã nhận lần giao thất bại">
+      <bpmn:outgoing>B2_Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B2_EventDef_startFail" messageRef="B2_Message_1"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="B2_record" name="Ghi hoặc tra ShipmentEvent">
+      <bpmn:incoming>B2_Flow_1</bpmn:incoming>
+      <bpmn:incoming>B2_Flow_7</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_2</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataInput id="B2_IO_ShipmentEvent" name="ShipmentEvent (lần giao)"/>
+        <bpmn:inputSet><bpmn:dataInputRefs>B2_IO_ShipmentEvent</bpmn:dataInputRefs></bpmn:inputSet>
+        <bpmn:outputSet></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataInputAssociation id="B2_DataAssoc_3"><bpmn:sourceRef>B2_Data_ShipmentEvent</bpmn:sourceRef><bpmn:targetRef>B2_IO_ShipmentEvent</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="B2_retryOk" name="Còn lượt và khách đồng ý?" default="B2_Flow_4">
+      <bpmn:incoming>B2_Flow_2</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_3</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="B2_retry" name="Yêu cầu giao lại" messageRef="B2_Message_2">
+      <bpmn:incoming>B2_Flow_3</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="B2_retryResult" name="Đã nhận kết quả giao lại">
+      <bpmn:incoming>B2_Flow_5</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_6</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B2_EventDef_retryResult" messageRef="B2_Message_3"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="B2_retryDone" name="Giao lại thành công?" default="B2_Flow_7">
+      <bpmn:incoming>B2_Flow_6</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_7</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B2_retrySuccess" name="Ghi đã giao và COD đã thu nếu có">
+      <bpmn:incoming>B2_Flow_8</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_9</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="B2_retryEnd" name="Giao lại thành công">
+      <bpmn:incoming>B2_Flow_9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="B2_rto" name="Yêu cầu chuyển hoàn" messageRef="B2_Message_4">
+      <bpmn:incoming>B2_Flow_4</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_10</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:startEvent id="B2_startReturn" name="Đã nhận yêu cầu đổi/trả">
+      <bpmn:outgoing>B2_Flow_11</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B2_EventDef_startReturn" messageRef="B2_Message_5"/>
+    </bpmn:startEvent>
+    <bpmn:userTask id="B2_eligibility" name="Kiểm tra điều kiện đổi/trả">
+      <bpmn:incoming>B2_Flow_11</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_12</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="B2_eligible" name="Yêu cầu hợp lệ?" default="B2_Flow_14">
+      <bpmn:incoming>B2_Flow_12</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_13</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="B2_reject" name="Ghi lý do và báo khách">
+      <bpmn:incoming>B2_Flow_14</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_15</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="B2_rejectEnd" name="Yêu cầu bị từ chối">
+      <bpmn:incoming>B2_Flow_15</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="B2_rma" name="Lập RMA và gửi hướng dẫn" messageRef="B2_Message_6">
+      <bpmn:incoming>B2_Flow_13</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_16</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B2_IO_Return" name="Return/RMA (hồ sơ đổi/trả)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B2_IO_Return</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B2_DataAssoc_1"><bpmn:sourceRef>B2_IO_Return</bpmn:sourceRef><bpmn:targetRef>B2_Data_Return</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:sendTask>
+    <bpmn:manualTask id="B2_receive" name="Thực nhận và đối chiếu mã kiện">
+      <bpmn:incoming>B2_Flow_10</bpmn:incoming>
+      <bpmn:incoming>B2_Flow_16</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_17</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:manualTask id="B2_qc" name="Kiểm chất lượng hàng">
+      <bpmn:incoming>B2_Flow_17</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_18</bpmn:outgoing>
+    </bpmn:manualTask>
+    <bpmn:exclusiveGateway id="B2_qcOk" name="Bán lại được?" default="B2_Flow_20">
+      <bpmn:incoming>B2_Flow_18</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_19</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_20</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B2_restock" name="Ghi nhập lại hàng có thể bán">
+      <bpmn:incoming>B2_Flow_19</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_21</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B2_IO_StockEntry" name="StockEntry (biến động tồn)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B2_IO_StockEntry</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B2_DataAssoc_2"><bpmn:sourceRef>B2_IO_StockEntry</bpmn:sourceRef><bpmn:targetRef>B2_Data_StockEntry</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="B2_quarantine" name="Ghi đưa hàng vào khu cách ly">
+      <bpmn:incoming>B2_Flow_20</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_22</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="B2_decision" name="Xác định hướng xử lý được duyệt">
+      <bpmn:incoming>B2_Flow_21</bpmn:incoming>
+      <bpmn:incoming>B2_Flow_22</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_23</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="B2_action" name="Hướng xử lý?" default="B2_Flow_28">
+      <bpmn:incoming>B2_Flow_23</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_24</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_25</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_26</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_27</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_28</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B2_uncoll" name="Ghi COD chưa thu">
+      <bpmn:incoming>B2_Flow_24</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_34</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="B2_replacement" name="Giữ hàng thay thế và lập vận đơn">
+      <bpmn:incoming>B2_Flow_25</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_35</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="B2_sendRefund" name="Gửi yêu cầu hoàn QR" messageRef="B2_Message_7">
+      <bpmn:incoming>B2_Flow_26</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_29</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="B2_refundResponse" name="Đã nhận kết quả hoàn QR">
+      <bpmn:incoming>B2_Flow_29</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_30</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="B2_EventDef_refundResponse" messageRef="B2_Message_8"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="B2_refundOk" name="Hoàn tiền thành công?" default="B2_Flow_32">
+      <bpmn:incoming>B2_Flow_30</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_31</bpmn:outgoing>
+      <bpmn:outgoing>B2_Flow_32</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="B2_refundRecord" name="Ghi khoản hoàn QR">
+      <bpmn:incoming>B2_Flow_31</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_33</bpmn:outgoing>
+      <bpmn:ioSpecification>
+        <bpmn:dataOutput id="B2_IO_PaymentEntry" name="PaymentEntry (tiền hoàn)"/>
+        <bpmn:inputSet></bpmn:inputSet>
+        <bpmn:outputSet><bpmn:dataOutputRefs>B2_IO_PaymentEntry</bpmn:dataOutputRefs></bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="B2_DataAssoc_4"><bpmn:sourceRef>B2_IO_PaymentEntry</bpmn:sourceRef><bpmn:targetRef>B2_Data_PaymentEntry</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="B2_codRefund" name="Hoàn COD và ghi chứng từ chi">
+      <bpmn:incoming>B2_Flow_27</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_36</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="B2_verify" name="Mở hồ sơ cần xác minh">
+      <bpmn:incoming>B2_Flow_28</bpmn:incoming>
+      <bpmn:incoming>B2_Flow_32</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_37</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="B2_pending" name="Đã chuyển kế toán xác minh">
+      <bpmn:incoming>B2_Flow_37</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="B2_close" name="Đóng hồ sơ hàng quay về">
+      <bpmn:incoming>B2_Flow_33</bpmn:incoming>
+      <bpmn:incoming>B2_Flow_34</bpmn:incoming>
+      <bpmn:incoming>B2_Flow_35</bpmn:incoming>
+      <bpmn:incoming>B2_Flow_36</bpmn:incoming>
+      <bpmn:outgoing>B2_Flow_38</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="B2_end" name="Đã xử lý hàng quay về">
+      <bpmn:incoming>B2_Flow_38</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="B2_Flow_1" sourceRef="B2_startFail" targetRef="B2_record"/>
+    <bpmn:sequenceFlow id="B2_Flow_2" sourceRef="B2_record" targetRef="B2_retryOk"/>
+    <bpmn:sequenceFlow id="B2_Flow_3" name="Có" sourceRef="B2_retryOk" targetRef="B2_retry"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_4" name="Không" sourceRef="B2_retryOk" targetRef="B2_rto"/>
+    <bpmn:sequenceFlow id="B2_Flow_5" sourceRef="B2_retry" targetRef="B2_retryResult"/>
+    <bpmn:sequenceFlow id="B2_Flow_6" sourceRef="B2_retryResult" targetRef="B2_retryDone"/>
+    <bpmn:sequenceFlow id="B2_Flow_7" name="Không" sourceRef="B2_retryDone" targetRef="B2_record"/>
+    <bpmn:sequenceFlow id="B2_Flow_8" name="Có" sourceRef="B2_retryDone" targetRef="B2_retrySuccess"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_9" sourceRef="B2_retrySuccess" targetRef="B2_retryEnd"/>
+    <bpmn:sequenceFlow id="B2_Flow_10" sourceRef="B2_rto" targetRef="B2_receive"/>
+    <bpmn:sequenceFlow id="B2_Flow_11" sourceRef="B2_startReturn" targetRef="B2_eligibility"/>
+    <bpmn:sequenceFlow id="B2_Flow_12" sourceRef="B2_eligibility" targetRef="B2_eligible"/>
+    <bpmn:sequenceFlow id="B2_Flow_13" name="Có" sourceRef="B2_eligible" targetRef="B2_rma"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_14" name="Không" sourceRef="B2_eligible" targetRef="B2_reject"/>
+    <bpmn:sequenceFlow id="B2_Flow_15" sourceRef="B2_reject" targetRef="B2_rejectEnd"/>
+    <bpmn:sequenceFlow id="B2_Flow_16" sourceRef="B2_rma" targetRef="B2_receive"/>
+    <bpmn:sequenceFlow id="B2_Flow_17" sourceRef="B2_receive" targetRef="B2_qc"/>
+    <bpmn:sequenceFlow id="B2_Flow_18" sourceRef="B2_qc" targetRef="B2_qcOk"/>
+    <bpmn:sequenceFlow id="B2_Flow_19" name="Có" sourceRef="B2_qcOk" targetRef="B2_restock"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_20" name="Không" sourceRef="B2_qcOk" targetRef="B2_quarantine"/>
+    <bpmn:sequenceFlow id="B2_Flow_21" sourceRef="B2_restock" targetRef="B2_decision"/>
+    <bpmn:sequenceFlow id="B2_Flow_22" sourceRef="B2_quarantine" targetRef="B2_decision"/>
+    <bpmn:sequenceFlow id="B2_Flow_23" sourceRef="B2_decision" targetRef="B2_action"/>
+    <bpmn:sequenceFlow id="B2_Flow_24" name="Chuyển hoàn COD đã xác nhận chưa thu" sourceRef="B2_action" targetRef="B2_uncoll"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Chuyển hoàn COD đã xác nhận chưa thu</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_25" name="Đổi hàng được duyệt" sourceRef="B2_action" targetRef="B2_replacement"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Đổi hàng được duyệt</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_26" name="Hoàn QR được duyệt" sourceRef="B2_action" targetRef="B2_sendRefund"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Hoàn QR được duyệt</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_27" name="Trả sau giao COD đã thu, được duyệt" sourceRef="B2_action" targetRef="B2_codRefund"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Trả sau giao COD đã thu, được duyệt</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_28" name="Cần xác minh" sourceRef="B2_action" targetRef="B2_verify"/>
+    <bpmn:sequenceFlow id="B2_Flow_29" sourceRef="B2_sendRefund" targetRef="B2_refundResponse"/>
+    <bpmn:sequenceFlow id="B2_Flow_30" sourceRef="B2_refundResponse" targetRef="B2_refundOk"/>
+    <bpmn:sequenceFlow id="B2_Flow_31" name="Có" sourceRef="B2_refundOk" targetRef="B2_refundRecord"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Có</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="B2_Flow_32" name="Không" sourceRef="B2_refundOk" targetRef="B2_verify"/>
+    <bpmn:sequenceFlow id="B2_Flow_33" sourceRef="B2_refundRecord" targetRef="B2_close"/>
+    <bpmn:sequenceFlow id="B2_Flow_34" sourceRef="B2_uncoll" targetRef="B2_close"/>
+    <bpmn:sequenceFlow id="B2_Flow_35" sourceRef="B2_replacement" targetRef="B2_close"/>
+    <bpmn:sequenceFlow id="B2_Flow_36" sourceRef="B2_codRefund" targetRef="B2_close"/>
+    <bpmn:sequenceFlow id="B2_Flow_37" sourceRef="B2_verify" targetRef="B2_pending"/>
+    <bpmn:sequenceFlow id="B2_Flow_38" sourceRef="B2_close" targetRef="B2_end"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="B2_Diagram" name="BPMN-02 — Giao thất bại, chuyển hoàn và đổi/trả">
+    <bpmndi:BPMNPlane id="B2_Plane" bpmnElement="B2_Collaboration">
+      <bpmndi:BPMNShape id="B2_Di_shop" bpmnElement="B2_shop" isHorizontal="true"><dc:Bounds x="30" y="170" width="3423" height="1272"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_buyer" bpmnElement="B2_buyer" isHorizontal="true"><dc:Bounds x="87" y="48" width="863" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_carrier" bpmnElement="B2_carrier" isHorizontal="true"><dc:Bounds x="972" y="48" width="1040" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_qr" bpmnElement="B2_qr" isHorizontal="true"><dc:Bounds x="2388" y="48" width="863" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_Lane_ship" bpmnElement="B2_Lane_ship" isHorizontal="true"><dc:Bounds x="59" y="170" width="3394" height="318"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_Lane_returns" bpmnElement="B2_Lane_returns" isHorizontal="true"><dc:Bounds x="59" y="488" width="3394" height="318"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_Lane_stock" bpmnElement="B2_Lane_stock" isHorizontal="true"><dc:Bounds x="59" y="806" width="3394" height="318"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_Lane_pay" bpmnElement="B2_Lane_pay" isHorizontal="true"><dc:Bounds x="59" y="1124" width="3394" height="318"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_startFail" bpmnElement="B2_startFail"><dc:Bounds x="148" y="325" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="89" y="365" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_record" bpmnElement="B2_record"><dc:Bounds x="271" y="312" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_retryOk" bpmnElement="B2_retryOk" isMarkerVisible="true"><dc:Bounds x="496" y="319" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="443" y="371" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_retry" bpmnElement="B2_retry"><dc:Bounds x="625" y="312" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_retryResult" bpmnElement="B2_retryResult"><dc:Bounds x="856" y="325" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="797" y="365" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_retryDone" bpmnElement="B2_retryDone" isMarkerVisible="true"><dc:Bounds x="1027" y="319" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="974" y="371" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_retrySuccess" bpmnElement="B2_retrySuccess"><dc:Bounds x="1156" y="312" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_retryEnd" bpmnElement="B2_retryEnd"><dc:Bounds x="1387" y="325" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1328" y="365" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_rto" bpmnElement="B2_rto"><dc:Bounds x="625" y="383" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_startReturn" bpmnElement="B2_startReturn"><dc:Bounds x="148" y="643" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="89" y="683" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_eligibility" bpmnElement="B2_eligibility"><dc:Bounds x="271" y="630" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_eligible" bpmnElement="B2_eligible" isMarkerVisible="true"><dc:Bounds x="496" y="637" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="443" y="689" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_reject" bpmnElement="B2_reject"><dc:Bounds x="625" y="701" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_rejectEnd" bpmnElement="B2_rejectEnd"><dc:Bounds x="856" y="714" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="797" y="754" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_rma" bpmnElement="B2_rma"><dc:Bounds x="625" y="630" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_receive" bpmnElement="B2_receive"><dc:Bounds x="979" y="948" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_qc" bpmnElement="B2_qc"><dc:Bounds x="1156" y="948" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_qcOk" bpmnElement="B2_qcOk" isMarkerVisible="true"><dc:Bounds x="1381" y="955" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1328" y="1007" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_restock" bpmnElement="B2_restock"><dc:Bounds x="1510" y="948" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_quarantine" bpmnElement="B2_quarantine"><dc:Bounds x="1510" y="1019" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_decision" bpmnElement="B2_decision"><dc:Bounds x="1687" y="630" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_action" bpmnElement="B2_action" isMarkerVisible="true"><dc:Bounds x="1912" y="637" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1859" y="689" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_uncoll" bpmnElement="B2_uncoll"><dc:Bounds x="2041" y="1337" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_replacement" bpmnElement="B2_replacement"><dc:Bounds x="2218" y="948" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_sendRefund" bpmnElement="B2_sendRefund"><dc:Bounds x="2218" y="1266" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_refundResponse" bpmnElement="B2_refundResponse"><dc:Bounds x="2449" y="1279" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2390" y="1319" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_refundOk" bpmnElement="B2_refundOk" isMarkerVisible="true"><dc:Bounds x="2620" y="1273" width="48" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="2567" y="1325" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_refundRecord" bpmnElement="B2_refundRecord"><dc:Bounds x="2749" y="1266" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_codRefund" bpmnElement="B2_codRefund"><dc:Bounds x="2395" y="1337" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_verify" bpmnElement="B2_verify"><dc:Bounds x="2926" y="1337" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_pending" bpmnElement="B2_pending"><dc:Bounds x="3157" y="1350" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="3098" y="1390" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_close" bpmnElement="B2_close"><dc:Bounds x="3103" y="630" width="144" height="62"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_end" bpmnElement="B2_end"><dc:Bounds x="3334" y="643" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="3275" y="683" width="154" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_Data_Return" bpmnElement="B2_Data_Return"><dc:Bounds x="750" y="732" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="699" y="783" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_Data_StockEntry" bpmnElement="B2_Data_StockEntry"><dc:Bounds x="1635" y="1050" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="1584" y="1101" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_Data_ShipmentEvent" bpmnElement="B2_Data_ShipmentEvent"><dc:Bounds x="396" y="414" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="345" y="465" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B2_Di_Data_PaymentEntry" bpmnElement="B2_Data_PaymentEntry"><dc:Bounds x="2874" y="1368" width="36" height="48"/><bpmndi:BPMNLabel><dc:Bounds x="2823" y="1419" width="138" height="26"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_1" bpmnElement="B2_Flow_1"><di:waypoint x="184" y="343"/><di:waypoint x="271" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_2" bpmnElement="B2_Flow_2"><di:waypoint x="415" y="343"/><di:waypoint x="496" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_3" bpmnElement="B2_Flow_3"><di:waypoint x="544" y="343"/><di:waypoint x="625" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_4" bpmnElement="B2_Flow_4"><di:waypoint x="544" y="343"/><di:waypoint x="608" y="343"/><di:waypoint x="608" y="414"/><di:waypoint x="625" y="414"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_5" bpmnElement="B2_Flow_5"><di:waypoint x="769" y="343"/><di:waypoint x="856" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_6" bpmnElement="B2_Flow_6"><di:waypoint x="892" y="343"/><di:waypoint x="1027" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_7" bpmnElement="B2_Flow_7"><di:waypoint x="1027" y="343"/><di:waypoint x="1010" y="343"/><di:waypoint x="1010" y="302"/><di:waypoint x="432" y="302"/><di:waypoint x="432" y="343"/><di:waypoint x="415" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_8" bpmnElement="B2_Flow_8"><di:waypoint x="1075" y="343"/><di:waypoint x="1156" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_9" bpmnElement="B2_Flow_9"><di:waypoint x="1300" y="343"/><di:waypoint x="1387" y="343"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_10" bpmnElement="B2_Flow_10"><di:waypoint x="769" y="414"/><di:waypoint x="962" y="414"/><di:waypoint x="962" y="979"/><di:waypoint x="979" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_11" bpmnElement="B2_Flow_11"><di:waypoint x="184" y="661"/><di:waypoint x="271" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_12" bpmnElement="B2_Flow_12"><di:waypoint x="415" y="661"/><di:waypoint x="496" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_13" bpmnElement="B2_Flow_13"><di:waypoint x="544" y="661"/><di:waypoint x="625" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_14" bpmnElement="B2_Flow_14"><di:waypoint x="544" y="661"/><di:waypoint x="608" y="661"/><di:waypoint x="608" y="732"/><di:waypoint x="625" y="732"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_15" bpmnElement="B2_Flow_15"><di:waypoint x="697" y="763"/><di:waypoint x="697" y="792"/><di:waypoint x="839" y="792"/><di:waypoint x="839" y="732"/><di:waypoint x="856" y="732"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_16" bpmnElement="B2_Flow_16"><di:waypoint x="769" y="661"/><di:waypoint x="909" y="661"/><di:waypoint x="909" y="979"/><di:waypoint x="979" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_17" bpmnElement="B2_Flow_17"><di:waypoint x="1123" y="979"/><di:waypoint x="1156" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_18" bpmnElement="B2_Flow_18"><di:waypoint x="1300" y="979"/><di:waypoint x="1381" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_19" bpmnElement="B2_Flow_19"><di:waypoint x="1429" y="979"/><di:waypoint x="1510" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_20" bpmnElement="B2_Flow_20"><di:waypoint x="1429" y="979"/><di:waypoint x="1493" y="979"/><di:waypoint x="1493" y="1050"/><di:waypoint x="1510" y="1050"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_21" bpmnElement="B2_Flow_21"><di:waypoint x="1654" y="979"/><di:waypoint x="1670" y="979"/><di:waypoint x="1670" y="661"/><di:waypoint x="1687" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_22" bpmnElement="B2_Flow_22"><di:waypoint x="1510" y="1050"/><di:waypoint x="1498" y="1050"/><di:waypoint x="1498" y="661"/><di:waypoint x="1687" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_23" bpmnElement="B2_Flow_23"><di:waypoint x="1831" y="661"/><di:waypoint x="1912" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_24" bpmnElement="B2_Flow_24"><di:waypoint x="1960" y="661"/><di:waypoint x="2024" y="661"/><di:waypoint x="2024" y="1368"/><di:waypoint x="2041" y="1368"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_25" bpmnElement="B2_Flow_25"><di:waypoint x="1960" y="661"/><di:waypoint x="2201" y="661"/><di:waypoint x="2201" y="979"/><di:waypoint x="2218" y="979"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_26" bpmnElement="B2_Flow_26"><di:waypoint x="1960" y="661"/><di:waypoint x="1977" y="661"/><di:waypoint x="1977" y="1297"/><di:waypoint x="2218" y="1297"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_27" bpmnElement="B2_Flow_27"><di:waypoint x="1936" y="685"/><di:waypoint x="1936" y="1256"/><di:waypoint x="2378" y="1256"/><di:waypoint x="2378" y="1368"/><di:waypoint x="2395" y="1368"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_28" bpmnElement="B2_Flow_28"><di:waypoint x="1936" y="685"/><di:waypoint x="1936" y="702"/><di:waypoint x="2998" y="702"/><di:waypoint x="2998" y="1337"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_29" bpmnElement="B2_Flow_29"><di:waypoint x="2362" y="1297"/><di:waypoint x="2449" y="1297"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_30" bpmnElement="B2_Flow_30"><di:waypoint x="2485" y="1297"/><di:waypoint x="2620" y="1297"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_31" bpmnElement="B2_Flow_31"><di:waypoint x="2668" y="1297"/><di:waypoint x="2749" y="1297"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_32" bpmnElement="B2_Flow_32"><di:waypoint x="2668" y="1297"/><di:waypoint x="2685" y="1297"/><di:waypoint x="2685" y="1338"/><di:waypoint x="2914" y="1338"/><di:waypoint x="2914" y="1320"/><di:waypoint x="2998" y="1320"/><di:waypoint x="2998" y="1337"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_33" bpmnElement="B2_Flow_33"><di:waypoint x="2893" y="1297"/><di:waypoint x="3086" y="1297"/><di:waypoint x="3086" y="661"/><di:waypoint x="3103" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_34" bpmnElement="B2_Flow_34"><di:waypoint x="2185" y="1368"/><di:waypoint x="2383" y="1368"/><di:waypoint x="2383" y="661"/><di:waypoint x="3103" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_35" bpmnElement="B2_Flow_35"><di:waypoint x="2362" y="979"/><di:waypoint x="3087" y="979"/><di:waypoint x="3087" y="661"/><di:waypoint x="3103" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_36" bpmnElement="B2_Flow_36"><di:waypoint x="2539" y="1368"/><di:waypoint x="2737" y="1368"/><di:waypoint x="2737" y="684"/><di:waypoint x="3086" y="684"/><di:waypoint x="3086" y="661"/><di:waypoint x="3103" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_37" bpmnElement="B2_Flow_37"><di:waypoint x="3070" y="1368"/><di:waypoint x="3157" y="1368"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_Flow_38" bpmnElement="B2_Flow_38"><di:waypoint x="3247" y="661"/><di:waypoint x="3334" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_MsgFlow_1" bpmnElement="B2_MsgFlow_1"><di:waypoint x="1012" y="108"/><di:waypoint x="1012" y="125"/><di:waypoint x="166" y="125"/><di:waypoint x="166" y="308"/><di:waypoint x="166" y="325"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_MsgFlow_2" bpmnElement="B2_MsgFlow_2"><di:waypoint x="697" y="312"/><di:waypoint x="697" y="295"/><di:waypoint x="697" y="132"/><di:waypoint x="1012" y="132"/><di:waypoint x="1012" y="108"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_MsgFlow_3" bpmnElement="B2_MsgFlow_3"><di:waypoint x="1012" y="108"/><di:waypoint x="1012" y="139"/><di:waypoint x="874" y="139"/><di:waypoint x="874" y="308"/><di:waypoint x="874" y="325"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_MsgFlow_4" bpmnElement="B2_MsgFlow_4"><di:waypoint x="769" y="414"/><di:waypoint x="786" y="414"/><di:waypoint x="786" y="414"/><di:waypoint x="786" y="125"/><di:waypoint x="1012" y="125"/><di:waypoint x="1012" y="108"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_MsgFlow_5" bpmnElement="B2_MsgFlow_5"><di:waypoint x="255" y="108"/><di:waypoint x="255" y="132"/><di:waypoint x="255" y="661"/><di:waypoint x="201" y="661"/><di:waypoint x="184" y="661"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_MsgFlow_6" bpmnElement="B2_MsgFlow_6"><di:waypoint x="769" y="661"/><di:waypoint x="786" y="661"/><di:waypoint x="786" y="661"/><di:waypoint x="786" y="139"/><di:waypoint x="796" y="139"/><di:waypoint x="796" y="108"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_MsgFlow_7" bpmnElement="B2_MsgFlow_7"><di:waypoint x="2362" y="1297"/><di:waypoint x="2379" y="1297"/><di:waypoint x="2379" y="1297"/><di:waypoint x="2379" y="125"/><di:waypoint x="2428" y="125"/><di:waypoint x="2428" y="108"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_MsgFlow_8" bpmnElement="B2_MsgFlow_8"><di:waypoint x="2467" y="108"/><di:waypoint x="2467" y="132"/><di:waypoint x="2467" y="1262"/><di:waypoint x="2467" y="1279"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_DataAssoc_1" bpmnElement="B2_DataAssoc_1"><di:waypoint x="697" y="692"/><di:waypoint x="697" y="712"/><di:waypoint x="768" y="712"/><di:waypoint x="768" y="732"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_DataAssoc_2" bpmnElement="B2_DataAssoc_2"><di:waypoint x="1582" y="1010"/><di:waypoint x="1582" y="1030"/><di:waypoint x="1653" y="1030"/><di:waypoint x="1653" y="1050"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_DataAssoc_3" bpmnElement="B2_DataAssoc_3"><di:waypoint x="414" y="414"/><di:waypoint x="414" y="394"/><di:waypoint x="343" y="394"/><di:waypoint x="343" y="374"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_Di_DataAssoc_4" bpmnElement="B2_DataAssoc_4"><di:waypoint x="2821" y="1328"/><di:waypoint x="2821" y="1348"/><di:waypoint x="2892" y="1348"/><di:waypoint x="2892" y="1368"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
