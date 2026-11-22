@@ -6,7 +6,7 @@ Mỗi ADR ghi một quyết định kiến trúc của hệ thống Order-to-Cas
 
 **Title:** Dùng modular monolith cho các phân hệ Order-to-Cash.
 
-**Status:** Đã chấp nhận trong thiết kế.
+**Status:** Đã chấp nhận trong thiết kế. Rà soát kỹ thuật ngày 22/11/2026.
 
 **Context:** Shop có một website, một kho trung tâm và một ĐVVC trong phạm vi mô hình. Mức 100–300 đơn/ngày là giả định thiết kế, còn tải đồng thời tại giờ cao điểm cần đo ở bước kiểm chứng. Nhóm cần triển khai được các luồng đặt đơn, giữ hàng, giao hàng, xử lý hàng hoàn và đối soát với ít thành phần vận hành. [Phạm vi và nguyên tắc AP-05](01_togaf_chuan_hoa.md)
 
@@ -33,7 +33,7 @@ Tổ chức `Order`, `Inventory`, `Payment`, `Fulfillment/Shipping`, `Return` v�
 
 ### Reason
 
-A ưu tiên giao dịch cục bộ cho các thay đổi liên quan đến đơn và tồn, đồng thời giảm số thành phần nhóm phải triển khai ở giai đoạn đầu. B phù hợp khi đã có nhu cầu phát hành độc lập hoặc tải của một miền khác biệt rõ rệt. Với quy mô giả định hiện tại, lợi ích đó chưa đủ để ưu tiên thêm cơ chế điều phối và phục hồi giữa các dịch vụ.
+A ưu tiên tính nhất quán khi giữ hàng và giảm số thành phần nhóm phải vận hành. Phạm vi một kho và khối lượng dự kiến 100–300 đơn/ngày là căn cứ để bắt đầu với kiến trúc gọn. Số đơn theo ngày chưa phản ánh lượng truy cập đồng thời, webhook hoặc độ bận khi đối soát cuối kỳ. B phù hợp hơn nếu các miền có nhu cầu triển khai hoặc tăng tài nguyên độc lập đã được chứng minh.
 
 ### Trade-offs
 
@@ -41,13 +41,15 @@ Nhóm chấp nhận lịch phát hành chung và phạm vi ảnh hưởng rộng
 
 ### Consequences
 
-Giữ ranh giới phân hệ bằng giao diện nội bộ và kiểm tra phụ thuộc trong mã nguồn. Đo tải và thời gian xử lý theo phân hệ trước khi xem xét tách dịch vụ. Truy vết **AP-05, NFR-01, NFR-07, WP-01–WP-02**.
+Mỗi phân hệ sở hữu bảng nghiệp vụ của mình. Có thể tách các bảng theo schema PostgreSQL để dễ quản lý, đồng thời kiểm tra phụ thuộc trong CI và dùng giao diện nội bộ khi cần dữ liệu từ phân hệ khác. Báo cáo liên miền có thể đọc từ bản chiếu dữ liệu dành riêng cho báo cáo. Phạm vi giao dịch cục bộ chỉ bao gồm thay đổi trên cùng cơ sở dữ liệu qua cùng giao dịch. Chốt giao dịch trước khi chờ HTTP từ đối tác. Khi cần bảo đảm yêu cầu có thể gửi lại, lưu `OutboxEvent` trong giao dịch theo [ADR-03](#adr-03-chọn-cách-gửi-và-nhận-thông-điệp-với-đối-tác).
+
+Đánh giá lại khi phép thử NFR-01 với 50 người dùng ảo vượt mức thời gian hoặc tỷ lệ lỗi đã đặt và số đo chỉ ra một phân hệ cụ thể, hoặc khi chờ phát hành chung thường xuyên cản trở một phân hệ. Truy vết **AP-05, NFR-01, NFR-07, WP-01–WP-02**. [Yêu cầu và roadmap](01_togaf_chuan_hoa.md)
 
 ## ADR-02: Chọn cách giữ hàng và lưu lịch sử tồn kho
 
 **Title:** Dùng giao dịch PostgreSQL để giữ hàng và ghi `StockEntry`.
 
-**Status:** Đã chấp nhận trong thiết kế.
+**Status:** Đã chấp nhận trong thiết kế. Rà soát kỹ thuật ngày 22/11/2026.
 
 **Context:** Hai khách có thể cùng đặt món cuối cùng. Một kiện hàng hoàn cũng có thể bị quét lại nhiều lần. Kho cần vừa giữ đúng số lượng, vừa giải thích được vì sao số tồn thay đổi sau mỗi lần giữ, xuất hoặc nhận hàng hoàn. [Yêu cầu và mô hình dữ liệu](01_togaf_chuan_hoa.md) · [Giải thích `Reservation` và `StockEntry`](02_archimate_chuan_hoa.md)
 
@@ -61,19 +63,21 @@ Giữ ranh giới phân hệ bằng giao diện nội bộ và kiểm tra phụ 
 
 | Phương án | Xử lý đồng thời | Truy vết và xử lý lặp | Vận hành và đánh đổi |
 |---|---|---|---|
-| **A. PostgreSQL, chỉ lưu số tồn và giữ chỗ hiện tại** | Có thể dùng khóa dòng hoặc cập nhật có điều kiện để tránh giữ vượt tồn. | Xem được số dư và giữ chỗ hiện tại. Muốn lần lại từng lần tăng giảm phải thiết kế thêm lịch sử và khóa chống lặp cho từng thao tác. | Ít bảng và ít lượt ghi hơn C. Khi số liệu lệch, việc tìm nguyên nhân phụ thuộc vào chứng từ và nhật ký khác. |
-| **B. SQLite với `Reservation` và `StockEntry`** | Có giao dịch. Ở chế độ WAL, việc đọc và ghi có thể diễn ra đồng thời, còn các giao dịch ghi lần lượt dùng quyền ghi. | Có thể lưu cùng nhóm bản ghi nghiệp vụ nếu triển khai đúng ràng buộc và quy tắc chống lặp. | Ít việc cài đặt, phù hợp demo cục bộ. Khi đơn hàng, kho và worker cùng ghi, các giao dịch có thể phải chờ hoặc thử lại. [SQLite — WAL và xử lý đồng thời](https://www.sqlite.org/wal.html#concurrency) |
-| **C. PostgreSQL với `Reservation` và `StockEntry`** | Khóa các dòng số dư cần thay đổi hoặc cập nhật có điều kiện. Nếu một mặt hàng trong đơn thiếu tồn, hoàn tác thao tác giữ cho cả đơn. | Lưu lý do, số lượng và tham chiếu của từng biến động. Dùng khóa nghiệp vụ phù hợp để phát hiện thao tác lặp. | Phải vận hành dịch vụ PostgreSQL và thiết kế chỉ mục, giao dịch, sao lưu. Các yêu cầu cùng sửa một dòng tồn vẫn có thể chờ nhau. [PostgreSQL — Khóa](https://www.postgresql.org/docs/18/explicit-locking.html) · [Giao dịch đồng thời](https://www.postgresql.org/docs/18/transaction-iso.html) |
+| **A. PostgreSQL, chỉ lưu số tồn và giữ chỗ hiện tại** | Có thể dùng khóa dòng hoặc cập nhật có điều kiện để tránh giữ vượt tồn. | Xem được số dư và giữ chỗ hiện tại. Muốn lần lại từng lần tăng giảm phải thiết kế thêm lịch sử và khóa chống lặp cho từng thao tác. | Ít bảng và ít lượt ghi hơn B. Khi số liệu lệch, việc tìm nguyên nhân phụ thuộc vào chứng từ và nhật ký khác. |
+| **B. PostgreSQL, lưu số tồn, giữ chỗ và sổ biến động** | Dùng cùng cơ chế của A. Giữ toàn bộ mặt hàng trong một giao dịch. Nếu một mặt hàng thiếu tồn, hoàn tác thao tác giữ cho cả đơn. | Ghi lý do, số lượng và tham chiếu của từng biến động. Dùng khóa nghiệp vụ để phát hiện thao tác lặp. | Mỗi biến động có thêm một lượt ghi lịch sử. Các giao dịch cùng sửa một dòng tồn vẫn có thể phải chờ. [PostgreSQL về khóa và giao dịch đồng thời](https://www.postgresql.org/docs/18/explicit-locking.html) |
 
 ### Decision
 
-**Chọn phương án C cho kiến trúc đích.**
+**Chọn phương án B cho kiến trúc đích.**
 
-`Inventory` cập nhật số dư, tạo hoặc cập nhật `Reservation` và thêm `StockEntry` trong một giao dịch. Trong phạm vi một kho, có thể dùng khóa duy nhất `(order_id, sku)` khi mỗi mặt hàng có một bản ghi giữ tổng số lượng theo đơn. Riêng thao tác kho như nhận hàng hoàn cần khóa chống lặp theo mã thao tác và dòng hàng tương ứng. Khi hàng quay về, ghi vào khu chờ kiểm tra chất lượng. Chỉ ghi `RESTOCK` và tăng tồn có thể bán khi hàng đạt kiểm tra. Khi sửa sai, bổ sung dòng điều chỉnh có lý do và tham chiếu đến dòng gốc. [PostgreSQL — Ràng buộc dữ liệu](https://www.postgresql.org/docs/18/ddl-constraints.html)
+- **Giữ hàng trong một giao dịch.** `Inventory` cập nhật số dư, tạo hoặc cập nhật `Reservation` và thêm `StockEntry` trong cùng giao dịch. Tại mức mặc định `READ COMMITTED`, dùng một lệnh cập nhật có điều kiện từ số thực sự bán được, chẳng hạn `WHERE available >= :qty` nếu số khả dụng được lưu trên dòng đó. Đồng thời chuyển số lượng từ khả dụng sang giữ chỗ. Nếu giao dịch khác vừa cập nhật cùng dòng, PostgreSQL chờ rồi kiểm tra lại điều kiện trên bản ghi mới khi giao dịch trước đã chốt. Nếu không cập nhật được dòng tồn đã xác định, hoàn tác cả đơn. Nếu cần đọc trước để tính, dùng `SELECT ... FOR UPDATE` trong cùng giao dịch. [PostgreSQL về mức cô lập](https://www.postgresql.org/docs/18/transaction-iso.html)
+- **Đơn có nhiều SKU.** Khóa hoặc cập nhật theo cùng một thứ tự SKU ở mọi luồng có thể chạm các dòng đó. Nếu PostgreSQL hủy giao dịch do khóa chéo (`40P01`) hoặc do lỗi tuần tự hóa (`40001`), thử lại toàn bộ giao dịch với giới hạn. Dùng `NOT NULL` và `CHECK` để bảo vệ số lượng không âm và kiểm tra tổng các nhóm nếu chúng nằm trên cùng dòng số dư. [PostgreSQL về khóa và deadlock](https://www.postgresql.org/docs/18/explicit-locking.html) · [Ràng buộc dữ liệu](https://www.postgresql.org/docs/18/ddl-constraints.html) · [Thử lại giao dịch](https://www.postgresql.org/docs/18/mvcc-serialization-failure-handling.html)
+- **Lịch sử và chống ghi trùng.** Với một kho, `UNIQUE (order_id, sku)` định danh một bản ghi giữ tổng số lượng của mặt hàng trong đơn. Khi lượng giữ thay đổi hợp lệ, cập nhật bản ghi đó và thêm dòng lịch sử. Với hàng hoàn, đặt khóa duy nhất theo mã thao tác ổn định, dòng hàng và loại biến động nếu một thao tác ghi nhiều loại. Dùng khóa đó để trả lại kết quả của thao tác đã ghi. Chỉ chuyển từ chờ kiểm sang khả dụng khi kiểm hàng đạt và ghi `RESTOCK`. Tài khoản chạy ứng dụng tách khỏi tài khoản sở hữu bảng. Với bảng này, tài khoản ứng dụng chỉ đọc và thêm dòng `StockEntry`. Sửa sai bằng dòng điều chỉnh có lý do và tham chiếu. [PostgreSQL về quyền truy cập](https://www.postgresql.org/docs/18/ddl-priv.html)
+- **QR sát giờ hết hạn.** Tác vụ hết hạn và xử lý xác nhận QR cùng kiểm tra trạng thái đơn và giữ chỗ trong giao dịch. Chỉ một bên được chuyển từ trạng thái đang chờ sang kết quả tương ứng. Nếu xác nhận thắng, giữ hàng cho khâu giao. Nếu hết hạn thắng, giải phóng tồn. Nếu tiền đến sau khi hủy, lưu dấu vết thanh toán và chuyển xác minh hoặc hoàn theo chính sách. [Kịch bản TC-10](05_kiem_chung.md)
 
 ### Reason
 
-A có thể ngăn bán vượt tồn, nhưng thiếu lịch sử từng lần biến động mà tình huống hàng hoàn yêu cầu. B đáp ứng nhu cầu trình diễn và có chi phí cài đặt thấp, song cơ chế xử lý ghi khác nền vận hành dự kiến. C đáp ứng đồng thời mục tiêu giữ hàng chính xác và kiểm tra nguồn gốc chênh lệch tồn.
+Cả A và B có thể kiểm soát tranh chấp tồn trên PostgreSQL. Tiêu chí quyết định là vừa giữ đúng số lượng, vừa lần được sự thay đổi qua từng mốc xuất hàng và nhận hoàn. B đáp ứng cả hai. So sánh SQLite và PostgreSQL nằm ở bảng công nghệ bên dưới vì đó là lựa chọn môi trường, còn bảng này so sánh cách lưu tồn kho.
 
 ### Trade-offs
 
@@ -81,13 +85,13 @@ Mỗi nghiệp vụ kho ghi thêm lịch sử và cần quản lý vòng đời 
 
 ### Consequences
 
-Số lượng hàng vật lý trong kho bằng tổng hàng có thể bán, đang giữ, đã lấy chờ bàn giao, chờ kiểm và cách ly. Các số lượng này phải không âm. Mỗi đơn vị hàng chỉ thuộc một nhóm tại một thời điểm. Khi bàn giao, ghi xuất tồn vật lý và theo dõi kiện qua `Shipment`. Kiểm chứng trên PostgreSQL các tình huống nhiều khách tranh nhau lượng tồn còn ít, kho nhận hàng hoàn lặp và thông báo thanh toán QR đến sát lúc hết hạn giữ hàng. Truy vết **FR-02, FR-07, FR-10, REQ-COD-03, NFR-03, NFR-06**, tình huống **TC-03, TC-06, TC-10**. [Kế hoạch kiểm chứng](05_kiem_chung.md)
+Số lượng hàng vật lý trong kho bằng tổng hàng có thể bán, đang giữ, đã lấy chờ bàn giao, chờ kiểm và cách ly. Mỗi đơn vị chỉ thuộc một nhóm tại một thời điểm. Khi bàn giao, ghi xuất tồn vật lý và theo dõi kiện qua `Shipment`. Có thể kiểm tra số dư từng nhóm bằng số đầu kỳ cộng tổng biến động có dấu đến cùng mốc, tránh cộng trùng các lần chuyển giữa nhóm. Kiểm chứng giữ hàng đồng thời, nhận hoàn lặp và QR sát hạn trên PostgreSQL. Truy vết **FR-02, FR-07, FR-10, REQ-COD-03, NFR-03, NFR-06**, tình huống **TC-03, TC-06, TC-10**. [Kế hoạch kiểm chứng](05_kiem_chung.md)
 
 ## ADR-03: Chọn cách gửi và nhận thông điệp với đối tác
 
-**Title:** Dùng `OutboxEvent`, `InboxEvent` và worker để xử lý tích hợp.
+**Title:** Dùng `OutboxEvent`, `InboxEvent` và worker cho tích hợp bền vững, lấy mã QR qua HTTP đồng bộ.
 
-**Status:** Đã chấp nhận trong thiết kế.
+**Status:** Đã chấp nhận trong thiết kế. Rà soát kỹ thuật ngày 22/11/2026.
 
 **Context:** Shop gửi yêu cầu tạo vận đơn và nhận thông báo giao hàng hoặc thanh toán QR. Mất kết nối khi chờ phản hồi có thể xảy ra sau khi đối tác đã xử lý yêu cầu. Một thông báo cũng có thể đến lặp hoặc sai thứ tự. Thiết kế cần phục hồi được các tình huống này. [FR-04 đến FR-06 và EXT-01](01_togaf_chuan_hoa.md)
 
@@ -107,9 +111,11 @@ Số lượng hàng vật lý trong kho bằng tổng hàng có thể bán, đan
 
 ### Decision
 
-**Chọn phương án B.**
+**Chọn B làm cơ chế chính. Dùng A cho bước lấy mã QR để hiển thị.**
 
-Áp dụng cho tác vụ cần gửi bền vững, như tạo vận đơn, và tiếp nhận kết quả QR hoặc giao vận. Worker gửi lại với khoảng chờ tăng dần. Nếu đối tác hỗ trợ khóa chống tạo trùng, dùng cùng một mã qua các lần gửi. Nếu phản hồi chưa rõ và đối tác thiếu cơ chế đó, tra cứu theo mã tham chiếu trước khi gửi lại hoặc đưa vào danh sách cần kiểm tra. Thông báo đến được xác thực theo quy cách của đối tác rồi lưu vào `InboxEvent` với khóa theo nguồn và mã sự kiện nếu có. Nếu đối tác thiếu mã sự kiện, adapter xác định khóa ổn định từ dữ liệu đã xác thực theo hợp đồng tích hợp. Bước lấy mã QR để hiển thị có thể gọi trực tiếp theo luồng BPMN-01. [BPMN-01](03_bpmn.md)
+- **Yêu cầu gửi đi.** Lưu `OutboxEvent` cùng giao dịch với thay đổi nghiệp vụ cần gửi, như yêu cầu tạo vận đơn. Dùng lại mã chống trùng qua các lần gửi nếu đối tác hỗ trợ. Nếu mất phản hồi và đối tác thiếu cơ chế này, tra theo tham chiếu trước khi gửi lại hoặc chuyển xác minh. Lấy mã QR đồng bộ vì khách đang chờ kết quả. Gọi HTTP với giới hạn thời gian bên ngoài giao dịch dữ liệu, dùng tham chiếu ổn định theo đơn và áp dụng cùng quy trình xác minh nếu kết quả chưa rõ. [BPMN-01](03_bpmn.md) · [AWS về timeout và thử lại](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/)
+- **Worker.** Demo SQLite dùng một worker. Trên PostgreSQL, nếu chạy nhiều worker, dùng `FOR UPDATE SKIP LOCKED` để bỏ qua dòng đang bị khóa. Trong giao dịch ngắn, đánh dấu quyền xử lý có thời hạn rồi commit trước khi gửi HTTP. Dùng mã lượt nhận để worker cũ không ghi đè kết quả của lượt mới sau khi quyền xử lý hết hạn. Có thể lập chỉ mục theo trạng thái và thời điểm thử tiếp. [PostgreSQL về SKIP LOCKED](https://www.postgresql.org/docs/18/sql-select.html#SQL-FOR-UPDATE-SHARE)
+- **Thông báo đến.** Xác thực theo hợp đồng đối tác, chẳng hạn HMAC và thời điểm ký nếu có. Phản hồi thành công theo quy ước đối tác sau khi `InboxEvent` đã được lưu bền. Ưu tiên khóa theo nguồn và mã sự kiện. Nếu thiếu mã sự kiện, chỉ dùng tổ hợp trường đã được xác nhận phân biệt sự kiện, chẳng hạn mã vận đơn, loại sự kiện và mã lần giao. Bỏ trường chỉ thay đổi theo lần gửi. Khi không thể phân biệt chắc chắn, lưu để xác minh. Xử lý tác dụng nghiệp vụ và đánh dấu thông báo đã xử lý trong cùng giao dịch. Dùng quy tắc chuyển trạng thái và phiên bản của đối tác nếu có. Ví dụ, thông báo «đang giao» đến sau «đã giao» được giữ để truy vết và không đưa trạng thái lùi. [AWS về xử lý thông điệp lặp và sai thứ tự](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html)
 
 ### Reason
 
@@ -117,19 +123,19 @@ B giữ được dấu vết của yêu cầu giao vận qua lúc tiến trình 
 
 ### Trade-offs
 
-Hệ thống chấp nhận khoảng chờ trước khi xử lý đồng bộ xong với đối tác. Worker có thể gửi lại một thông điệp, vì vậy phải kiểm soát tác dụng nghiệp vụ ở cả bước gửi và bước nhận tùy khả năng của từng đối tác.
+Hệ thống chấp nhận độ trễ xử lý nền. Outbox lưu được việc cần gửi và cho phép thử lại khi lỗi. Một yêu cầu có thể đến đối tác nhiều lần hoặc vẫn cần xác minh sau khi hết lượt thử. Hiệu quả nghiệp vụ như xử lý một lần chỉ đạt được trong phạm vi có mã chống trùng, quy tắc trạng thái và cách ghi dữ liệu phù hợp ở bên nhận. [AWS về transactional outbox](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html) · [RabbitMQ về xác nhận gửi và nhận](https://www.rabbitmq.com/docs/confirms)
 
 ### Consequences
 
-Theo dõi thời gian chờ, số lần thử và các thông điệp phải xử lý thủ công. Kiểm chứng tình huống đối tác lỗi, phản hồi muộn và gửi trùng. Truy vết **FR-04, FR-05, FR-06, EXT-01, NFR-03, NFR-04, NFR-05**, tình huống **TC-04, TC-09**. [Kế hoạch kiểm chứng](05_kiem_chung.md)
+Thử lại lỗi tạm thời với khoảng chờ tăng dần và độ lệch ngẫu nhiên để tránh gửi dồn. Số lượt thử và thời hạn lưu hồ sơ cấu hình theo đối tác, cửa sổ gửi lại và yêu cầu truy vết. Kịch bản TC-04 cần cho phép ít nhất bốn lần gửi, kể cả lần đầu. Quá giới hạn hoặc lỗi không thể tự xử lý thì giao người xác minh. Theo dõi thời gian chờ, lượt thử và hồ sơ cần xử lý thủ công. Truy vết **FR-04, FR-05, FR-06, EXT-01, NFR-03, NFR-04, NFR-05**, tình huống **TC-04, TC-09**. [Kế hoạch kiểm chứng](05_kiem_chung.md)
 
 ## ADR-04: Chọn cách tổ chức dữ liệu đối soát COD
 
 **Title:** Lưu các mốc tiền để đối soát COD ba chiều và quản lý hóa đơn vận chuyển riêng.
 
-**Status:** Đã chấp nhận trong thiết kế.
+**Status:** Đã chấp nhận trong thiết kế. Rà soát kỹ thuật ngày 22/11/2026.
 
-**Context:** Theo chính sách của đề tài, ĐVVC chuyển đủ tiền COD đã thu theo tháng. Shop kiểm tra và thanh toán hóa đơn vận chuyển riêng. Cả hai phương án dưới đây đều áp dụng chính sách đó. Câu hỏi cần quyết định là hệ thống nên quản lý đối chiếu ở mức nào để kế toán xác định được tiền thiếu ở khâu thu hay khâu chuyển. [Yêu cầu NFR-08 và REQ-COD-02](01_togaf_chuan_hoa.md) · [Quy trình BPMN-03](03_bpmn.md)
+**Context:** Đối soát ba chiều trong dự án là so ba mốc tiền COD gồm số dự kiến thu theo đơn hoặc vận đơn, số ĐVVC báo đã thu và số thực nhận qua ngân hàng. Cả hai phương án dưới đây dùng cùng giả định nghiệp vụ của dự án. ĐVVC chuyển đủ số COD đã thu theo tháng, còn shop kiểm tra và thanh toán phí vận chuyển riêng. Nếu hợp đồng sau này quy định khấu trừ, cần xem lại ADR để lưu riêng COD đã thu, phí khấu trừ và tiền thực chuyển, rồi kiểm tra quan hệ giữa ba khoản theo chứng từ. [NFR-08 và REQ-COD-02](01_togaf_chuan_hoa.md) · [BPMN-03](03_bpmn.md)
 
 ### Decision Drivers
 
@@ -148,7 +154,11 @@ Theo dõi thời gian chờ, số lần thử và các thông điệp phải x�
 
 **Chọn phương án B.**
 
-Với COD, `PaymentEntry` ghi từng mốc dự kiến thu (`expected`), ĐVVC báo đã thu (`collected`) và khoản thực chuyển được xác nhận (`remitted`). Đối chiếu theo hai bước. So số phải thu và số ĐVVC báo thu theo đơn hoặc vận đơn. Sau đó so tổng số phải chuyển theo bảng kê với giao dịch ngân hàng gắn với đúng kỳ. Đơn hoàn được xác nhận chưa thu tiền được loại khỏi số phải chuyển. Nếu chưa đủ chứng từ để xác minh, tiếp tục theo dõi chênh lệch trong `ReconciliationCase`. Kiểm tra `CarrierInvoice` theo mã vận đơn và biểu phí, rồi ghi nhận một giao dịch shop trả phí riêng.
+Với COD, `PaymentEntry` ghi số dự kiến thu (`expected`), số ĐVVC báo đã thu (`collected`) và khoản thực chuyển đã xác nhận (`remitted`). Trước hết đối chiếu theo đơn hoặc vận đơn, sau đó so tổng kỳ với các giao dịch ngân hàng đã ghép. Giả định demo xác định kỳ theo ngày thu do ĐVVC ghi trên bảng kê, tính theo giờ Việt Nam. Khoản chuyển sau cuối tháng vẫn ghép về kỳ gốc theo mã kỳ hoặc tham chiếu chuyển khoản đã xác minh. Nếu bảng kê thiếu ngày thu hoặc thiếu tham chiếu đáng tin, chuyển xác minh thay vì tự gán theo ngày tiền về.
+
+Đơn chuyển hoàn đã xác nhận chưa thu được loại khỏi số phải chuyển. Nếu ĐVVC báo đã thu đối với kiện hoàn, giữ chứng từ và mở `ReconciliationCase`. Giao hoặc hoàn một phần cần đối chiếu số được duyệt và ghi điều chỉnh hoặc hoàn tiền có chứng từ, giữ lại mốc ban đầu. Phí hoàn hàng, nếu có theo hợp đồng, được kiểm cùng `CarrierInvoice` theo vận đơn và biểu phí.
+
+Lưu số tiền nguyên đồng bằng kiểu số nguyên, chẳng hạn `BIGINT` trên PostgreSQL. Khi dữ liệu cần phần lẻ, dùng `NUMERIC` có độ chính xác phù hợp. Khi nhập lại chứng từ, nhận diện file theo nguồn và mã lô hoặc dấu vân tay nội dung. Nhận diện dòng theo mã dòng do đối tác cấp hoặc khóa nghiệp vụ phân biệt đủ loại dòng và giao dịch. Sao kê dùng mã giao dịch trong phạm vi tài khoản. Bản bổ sung hoặc điều chỉnh hợp lệ có lịch sử riêng, để lần nhập lại không nhân đôi số liệu. [PostgreSQL về kiểu số](https://www.postgresql.org/docs/18/datatype-numeric.html) · [Quy tắc ghép dữ liệu BPMN-03](03_bpmn.md)
 
 Với QR, yêu cầu thanh toán bằng tổng tiền đơn, gồm phí vận chuyển thu khách. Phí xử lý QR được giả định bằng 0 và vận đơn QR có số COD bằng 0. Shop kiểm tra khoản đã xác nhận thanh toán với bảng kê của Ngân hàng/Đơn vị cung cấp thanh toán QR và tiền thực nhận. Hoàn tiền và điều chỉnh có bản ghi riêng. [Mô hình dữ liệu thanh toán và đối soát](02_archimate_chuan_hoa.md) · [BPMN-03](03_bpmn.md)
 
@@ -162,17 +172,17 @@ Nhóm chấp nhận đầu tư nhập bảng kê, xác định cách đánh dấ
 
 ### Consequences
 
-Ví dụ, bảng kê xác nhận đã thu 300.000 đồng, ngân hàng mới ghi có 280.000 đồng. Chênh lệch chuyển là 20.000 đồng. Nếu có hóa đơn vận chuyển 20.000 đồng cùng kỳ, hóa đơn được xử lý riêng và khoản thiếu COD vẫn cần theo dõi. Truy vết **FR-08 đến FR-11, REQ-COD-02, EXT-03, NFR-06, NFR-08**, tình huống **TC-05**. [Kịch bản demo COD](06_prototype.md) · [Kế hoạch kiểm chứng](05_kiem_chung.md)
+Ví dụ, bảng kê xác nhận đã thu 300.000 đồng, ngân hàng ghi có 280.000 đồng và hóa đơn vận chuyển cùng kỳ là 20.000 đồng. Hai khoản 20.000 đồng trùng con số nhưng thuộc hai luồng hạch toán riêng. Shop vẫn theo dõi thiếu 20.000 đồng COD đến khi có chứng từ chuyển bù hoặc điều chỉnh được phê duyệt. Truy vết **FR-08 đến FR-11, REQ-COD-02, EXT-03, NFR-06, NFR-08**, tình huống **TC-05**. [Kịch bản demo COD](06_prototype.md) · [Kế hoạch kiểm chứng](05_kiem_chung.md)
 
 ## Công nghệ dùng cho demo và kiến trúc đích
 
-Mốc đối chiếu tài liệu phát hành là **21/11/2026**. Các phiên bản dưới đây là đề xuất để triển khai và tái lập môi trường kiểm chứng. Phiên bản thực tế cần chốt cùng bộ phụ thuộc khi dựng prototype. [Phạm vi prototype](06_prototype.md)
+Mốc đối chiếu tài liệu phát hành là **22/11/2026**. Các phiên bản ghi dưới đây là đề xuất cho môi trường kiểm chứng. Khi dựng demo, cố định phiên bản FastAPI đã thử và ghi lại bộ phụ thuộc để chạy lại cùng môi trường. Kiểm thử API trước khi nâng phiên bản. [Phạm vi prototype](06_prototype.md) · [FastAPI về ghim phiên bản](https://fastapi.tiangolo.com/deployment/versions/)
 
 | Thành phần | Lựa chọn và căn cứ |
 |---|---|
 | **API và môi trường chạy** | Đề xuất Python **3.13** theo môi trường hiện có của dự án và FastAPI **0.165.0** cho prototype. FastAPI tạo mô tả OpenAPI từ API, thuận tiện cho demo luồng đặt hàng, callback và giao vận. Python 3.13 đang ở giai đoạn cập nhật bảo mật. [Vòng đời Python](https://devguide.python.org/versions/) · [Tính năng FastAPI](https://fastapi.tiangolo.com/features/) · [Ghi chú phát hành FastAPI](https://fastapi.tiangolo.com/release-notes/#01650-2026-11-18) |
 | **Cơ sở dữ liệu đích** | Đề xuất PostgreSQL **18**, dùng bản cập nhật 18.x còn được hỗ trợ. Tại mốc đối chiếu, bản cập nhật là **18.7**, nhánh 18 được hỗ trợ đến tháng 11/2030. PostgreSQL 19 cũng đã phát hành. Các cơ chế khóa dòng, giao dịch và ràng buộc cần cho ADR-02 đã có trong nhánh 18. [Chính sách phiên bản PostgreSQL](https://www.postgresql.org/support/versioning/) · [Tài liệu PostgreSQL 18](https://www.postgresql.org/docs/18/explicit-locking.html) |
-| **Cơ sở dữ liệu demo** | SQLite cục bộ giúp chạy kịch bản minh họa gọn theo thiết kế prototype. Các thử nghiệm tranh chấp giữ hàng, khóa dòng và nhiều worker cần chạy lại trên PostgreSQL. Phiên bản SQLite cần ghi nhận theo thư viện thực tế đi kèm môi trường chạy. [SQLite — WAL](https://www.sqlite.org/wal.html) |
+| **Cơ sở dữ liệu demo** | SQLite dùng một tệp cục bộ và chỉ có một giao dịch ghi đồng thời trên mỗi cơ sở dữ liệu. WAL cho phép đọc và ghi diễn ra đồng thời trong phần lớn trường hợp, với giới hạn một bên ghi. SQLite dùng cơ chế cấp quyền ghi thay cho khóa từng dòng của PostgreSQL. Có thể bắt đầu giao dịch đọc rồi ghi giữ tồn bằng `BEGIN IMMEDIATE` để xin quyền ghi sớm, đồng thời xử lý `SQLITE_BUSY` bằng thời gian chờ và thử lại có giới hạn. Ghi nhận phiên bản SQLite thực tế. Nếu bật WAL, dùng bản đã có bản vá WAL-Reset do SQLite công bố. Demo dùng một worker. Các phép thử về khóa dòng, giữ hàng đồng thời và nhiều worker chạy trên PostgreSQL. [SQLite về giao dịch](https://www.sqlite.org/lang_transaction.html) · [SQLite về WAL](https://www.sqlite.org/wal.html) |
 | **Tích hợp và xử lý nền** | Dùng Ngân hàng/Đơn vị cung cấp thanh toán QR và ĐVVC giả lập cho demo. Worker đọc `OutboxEvent` từ cơ sở dữ liệu theo ADR-03. RabbitMQ là phương án đã đánh giá khi có nhu cầu phân phối sự kiện rộng hơn. [Kiến trúc ứng dụng](02_archimate_chuan_hoa.md) · [Prototype](06_prototype.md) |
 | **Giao diện và hạ tầng** | Prototype đề xuất giao diện HTML/Bootstrap hoặc React tối giản. Kiến trúc đích mô tả máy ảo Linux, reverse proxy cho HTTPS và lưu chứng từ tập trung. Phiên bản giao diện, phần mềm proxy và nhà cung cấp hạ tầng sẽ được chốt theo môi trường triển khai. [Kiến trúc công nghệ](02_archimate_chuan_hoa.md) · [Phạm vi prototype](06_prototype.md) |
 
