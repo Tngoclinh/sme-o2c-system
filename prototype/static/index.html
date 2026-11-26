@@ -1,0 +1,40 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>O2C Demo</title><style>
+body{font:15px/1.45 system-ui,sans-serif;margin:0;padding:16px;background:#f6f7f9;color:#1c2430}
+main{max-width:1100px;margin:auto}button{padding:9px 14px;border:1px solid #b8c0cc;background:#fff;border-radius:6px;cursor:pointer}
+button.on{background:#1d4ed8;color:#fff;border-color:#1d4ed8}button:disabled{opacity:.4}
+.grid{display:grid;grid-template-columns:300px 1fr;gap:14px;margin-top:14px}@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid #dde2e8;border-radius:8px;padding:12px;margin-bottom:12px;min-width:0}
+.step{display:block;width:100%;text-align:left;margin-bottom:6px}
+.badges{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.badge{background:#eef2ff;border-radius:6px;padding:8px}.badge b{display:block}
+table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #e6e9ee;padding:5px;text-align:left;overflow-wrap:anywhere}
+.ok{color:#15803d}.bad{color:#b91c1c}pre{background:#f1f3f6;padding:8px;overflow:auto;font-size:12px}
+</style></head><body><main>
+<h2>Prototype Order-to-Cash</h2><p>Đối tác QR và ĐVVC là giả lập. Mỗi lần chạy sẽ xoá dữ liệu demo cũ.</p>
+<button id="b-e2e" onclick="run('e2e')">▶ Kịch bản E2E (QR, thành công)</button>
+<button id="b-exception" onclick="run('exception')">▶ Kịch bản ngoại lệ (COD bị từ chối)</button>
+<div class="grid"><nav id="list"></nav><section id="detail"></section></div></main>
+<script>
+let data,i=0;
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'—').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const table=(head,rows)=>rows.length?`<table><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</table>`:'<p>Chưa có.</p>';
+async function run(name){
+  $('detail').textContent='Đang chạy…';
+  try{const r=await fetch('/demo/run/'+name,{method:'POST'});if(!r.ok)throw Error('HTTP '+r.status);data=await r.json()}
+  catch(e){$('detail').textContent='Lỗi: '+e.message;return}
+  ['e2e','exception'].forEach(n=>$('b-'+n).className=n===name?'on':'');show(0)}
+function show(n){
+  i=n;const s=data.steps[i],o=s.order||{};
+  $('list').innerHTML=data.steps.map((x,k)=>`<button class="step ${k===i?'on':''}" onclick="show(${k})">${x.ok?'✓':'✗'} ${k+1}. ${esc(x.title)}</button>`).join('');
+  $('detail').innerHTML=`<div class="card"><h3>Bước ${i+1}/${data.steps.length}: ${esc(s.title)}</h3><p>Thực hiện: ${esc(s.actor)}</p>
+  <button onclick="show(${i-1})" ${i?'':'disabled'}>← Trước</button> <button onclick="show(${i+1})" ${i<data.steps.length-1?'':'disabled'}>Tiếp →</button>${s.error?`<p class="bad">${esc(s.error)}</p>`:''}</div>
+  <div class="card badges">${[['Order',o.status],['Payment',o.payment?.status],['Shipment',o.shipment?.status],['Return',o.return?.status]].map(([a,b])=>`<div class="badge">${a}<b>${esc(b)}</b></div>`).join('')}</div>
+  <div class="card"><b>Tồn kho</b>${table(['On hand','Bán được','Đang giữ','Chờ bàn giao','Chờ QC','Cách ly'],[[s.stock.on_hand,s.stock.available,s.stock.reserved,s.stock.picked,s.stock.qc,s.stock.quarantine]])}</div>
+  <div class="card"><b>Kiểm tra</b>${s.checks.map(c=>`<div class="${c.ok?'ok':'bad'}">${c.ok?'✓':'✗'} ${esc(c.label)}: ${esc(c.actual)}${c.ok?'':' (mong đợi '+esc(c.expected)+')'}</div>`).join('')}</div>
+  <div class="card"><b>Sổ biến động tồn</b>${table(['Loại','SKU','SL'],(o.stock_entries||[]).map(e=>[e.type,e.sku,e.qty]))}
+  <p><b>Sổ tiền</b></p>${table(['Loại','Số tiền','Nguồn','Tham chiếu'],(o.payment_entries||[]).map(e=>[e.type,e.amount,e.provider,e.external_ref]))}
+  <p>order_id: ${esc(o.id)} · correlation_id: ${esc(o.correlation_id)} · tracking: ${esc(o.shipment?.tracking)}</p></div>
+  <div class="card"><b>API đã gọi</b>${s.calls.map(c=>`<details><summary>${esc(c.request)} → ${c.status} · ${esc(c.actor)}</summary><pre>${esc(JSON.stringify({request:c.body,response:c.response},null,2))}</pre></details>`).join('')}</div>`}
+</script></body></html>
